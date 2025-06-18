@@ -1,10 +1,12 @@
 package controllers
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/entertrans/bi-backend-go/config"
+	"github.com/entertrans/bi-backend-go/models"
+)
 
-func UserControllerShow(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{
-		"message": "hello world",
-	})
-
+func GetAllUsers() ([]models.User, error) {
+	var users []models.User
+	result := config.DB.Find(&users)
+	return users, result.Error
 }
