@@ -1,26 +1,25 @@
 package main
 
 import (
-	"github.com/entertrans/bi-backend-go/config" // Ganti dengan nama module kamu di go.mod
+	"github.com/entertrans/bi-backend-go/config"
 	"github.com/entertrans/bi-backend-go/routers"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	config.ConnectDB() // koneksi database
-	// koneksi ke DB
+	// Koneksi DB
 	config.ConnectDB()
 
-	// setup routes
+	// Setup routes
 	r := routers.SetupRouter()
 
-	//test ping
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
-	})
+	//test struktur model
+	// var agama []models.Agama
+	// err := config.DB.Debug().Find(&agama).Error
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(agama)
 
-	// run server
+	// Jalankan server
 	r.Run(":8080")
 }

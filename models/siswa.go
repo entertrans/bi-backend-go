@@ -24,6 +24,10 @@ type Siswa struct {
 	Satelit              int    `json:"satelit" gorm:"column:satelit"`
 	OC                   int    `json:"oc" gorm:"column:oc"`
 	KC                   int    `json:"kc" gorm:"column:kc"`
+
+	// Relasi: satu siswa punya satu ortu
+	Orangtua Orangtua `json:"orangtua" gorm:"foreignKey:SiswaNIS;references:SiswaNIS"`
+	Agama    Agama    `json:"agama" gorm:"foreignKey:SiswaAgamaID;references:AgamaId"`
 }
 
 func (Siswa) TableName() string {

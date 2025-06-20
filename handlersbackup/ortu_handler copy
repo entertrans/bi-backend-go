@@ -1,0 +1,22 @@
+package handlers
+
+import (
+	"net/http"
+
+	"github.com/entertrans/bi-backend-go/config"
+	"github.com/entertrans/bi-backend-go/models"
+	"github.com/gin-gonic/gin"
+)
+
+func GetAllOrtu(c *gin.Context) {
+	var ortu []models.Orangtua
+
+	err := config.DB.Debug().Find(&ortu).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// fmt.Println("Jumlah data ortu:", len(ortu)) // log ke terminal
+	c.JSON(http.StatusOK, ortu)
+}
