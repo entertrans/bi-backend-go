@@ -16,6 +16,31 @@ func FetchAllSiswa() ([]models.Siswa, error) {
 	return siswa, err
 }
 
+// GET ALL LENGKAP
+func FetchAllSiswaAktif() ([]models.Siswa, error) {
+	var siswa []models.Siswa
+	err := config.DB.
+		Where("soft_deleted = ? AND siswa_kelas_id < ?", 0, 16).
+		Preload("Orangtua").
+		Preload("Kelas").
+		Preload("Satelit").
+		Preload("Agama").
+		Find(&siswa).Error
+
+	return siswa, err
+}
+
+func FetchAllSiswaKeluar() ([]models.Siswa, error) {
+	var siswa []models.Siswa
+	err := config.DB.
+		Where("soft_deleted = ?", 1).
+		Preload("Orangtua").
+		Preload("Agama").
+		Find(&siswa).Error
+
+	return siswa, err
+}
+
 // func FetchAllSiswa() ([]models.Siswa, error) {
 // 	var siswa []models.Siswa
 // 	err := config.DB.Find(&siswa).Error

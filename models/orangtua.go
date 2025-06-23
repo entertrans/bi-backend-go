@@ -1,7 +1,7 @@
 package models
 
 type Orangtua struct {
-	OrtuID          uint   `json:"ortu_id" gorm:"column:ortu_id"`
+	OrtuID          uint   `json:"-" gorm:"column:ortu_id"`
 	SiswaNIS        string `json:"siswa_nis" gorm:"column:siswa_nis"`
 	AyahNama        string `json:"ayah_nama" gorm:"column:ayah_nama"`
 	AyahNik         string `json:"ayah_nik" gorm:"column:ayah_nik"`

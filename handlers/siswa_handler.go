@@ -29,6 +29,23 @@ func GetAllSiswa(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
+func GetAllSiswaAktif(c *gin.Context) {
+	data, err := controllers.FetchAllSiswaAktif()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
+}
+func GetAllSiswaKeluar(c *gin.Context) {
+	data, err := controllers.FetchAllSiswaKeluar()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
+}
+
 // GET /siswa/:nis
 func FindSiswaByNis(c *gin.Context) {
 	nis := c.Param("nis")

@@ -1,7 +1,7 @@
 package models
 
 type Agama struct {
-	AgamaId   uint   `json:"agama_id" gorm:"column:agama_id"`
+	AgamaId   uint   `json:"-" gorm:"column:agama_id"`
 	AgamaNama string `json:"agama_nama" gorm:"column:agama_nama"`
 }
 

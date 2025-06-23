@@ -12,14 +12,6 @@ func main() {
 	// Setup routes
 	r := routers.SetupRouter()
 
-	//test struktur model
-	// var agama []models.Agama
-	// err := config.DB.Debug().Find(&agama).Error
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(agama)
-
-	// Jalankan server
+	// Jalankan server di port 8080
 	r.Run(":8080")
 }
