@@ -9,14 +9,15 @@ import (
 )
 
 func GetAllAgama(c *gin.Context) {
-    var agama []models.Agama
-    if err := config.DB.Debug().Find(&agama).Error; err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
-    c.JSON(http.StatusOK, agama)
+	var agama []models.Agama
+	if err := config.DB.Debug().Find(&agama).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, agama)
 }
-//kelas
+
+// kelas
 func GetAllKelas(c *gin.Context) {
 	var kelasAktif []models.Kelas
 	var kelasAlumni []models.Kelas
@@ -39,7 +40,6 @@ func GetAllKelas(c *gin.Context) {
 	})
 }
 
-
 func GetAllSatelit(c *gin.Context) {
 	var satelit []models.DtSatelit
 	if err := config.DB.Find(&satelit).Error; err != nil {
@@ -47,4 +47,12 @@ func GetAllSatelit(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, satelit)
+}
+func GetAllTA(c *gin.Context) {
+	var Ta []models.ThnAjaran
+	if err := config.DB.Find(&Ta).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, Ta)
 }

@@ -20,6 +20,7 @@ type Siswa struct {
 	SiswaPhoto           string `json:"siswa_photo" gorm:"column:siswa_photo"`
 	SoftDeleted          int    `json:"soft_deleted" gorm:"column:soft_deleted"`
 	TglKeluar            string `json:"tgl_keluar" gorm:"column:tgl_keluar"`
+	TglLulus             string `json:"ta_lulus" gorm:"column:ta_lulus"`
 	AnakKe               int    `json:"anak_ke" gorm:"column:anak_ke"`
 	SekolahAsal          string `json:"sekolah_asal" gorm:"column:sekolah_asal"`
 	SatelitID            int    `json:"satelit" gorm:"column:satelit"`

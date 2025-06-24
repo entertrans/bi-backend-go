@@ -32,8 +32,10 @@ func SetupRouter() *gin.Engine {
 	// ✅ Routes
 	//siswa
 	r.GET("/siswa", handlers.GetAllSiswa)             // all siswa
+	r.GET("/siswappdb", handlers.GetAllSiswaPPDB)     // all siswa aktif
 	r.GET("/siswaaktif", handlers.GetAllSiswaAktif)   // all siswa aktif
-	r.GET("/siswakeluar", handlers.GetAllSiswaKeluar) // all siswa aktif
+	r.GET("/siswakeluar", handlers.GetAllSiswaKeluar) // all siswa keluar
+	r.GET("/siswaalumni", handlers.GetAllSiswaAlumni) // all siswa alumni
 	r.GET("/siswa/:nis", handlers.GetSiswaWithOrtu)   // detail siswa + ortu
 
 	r.GET("/ortu", handlers.GetAllOrtu)         // semua ortu
@@ -43,6 +45,7 @@ func SetupRouter() *gin.Engine {
 	r.GET("/lookup/agama", handlers.GetAllAgama)
 	r.GET("/lookup/kelas", handlers.GetAllKelas)
 	r.GET("/lookup/satelit", handlers.GetAllSatelit)
+	r.GET("/lookup/tahun_ajaran", handlers.GetAllTA)
 
 	return r
 }

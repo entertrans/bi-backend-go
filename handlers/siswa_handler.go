@@ -45,6 +45,22 @@ func GetAllSiswaKeluar(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, data)
 }
+func GetAllSiswaAlumni(c *gin.Context) {
+	data, err := controllers.FetchAllSiswaAlumni()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
+}
+func GetAllSiswaPPDB(c *gin.Context) {
+	data, err := controllers.FetchAllSiswaPPDB()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, data)
+}
 
 // GET /siswa/:nis
 func FindSiswaByNis(c *gin.Context) {

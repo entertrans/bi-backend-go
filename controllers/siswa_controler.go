@@ -35,17 +35,36 @@ func FetchAllSiswaKeluar() ([]models.Siswa, error) {
 	err := config.DB.
 		Where("soft_deleted = ?", 1).
 		Preload("Orangtua").
+		Preload("Kelas").
+		Preload("Satelit").
 		Preload("Agama").
 		Find(&siswa).Error
 
 	return siswa, err
 }
 
-// func FetchAllSiswa() ([]models.Siswa, error) {
-// 	var siswa []models.Siswa
-// 	err := config.DB.Find(&siswa).Error
-// 	return siswa, err
-// }
+func FetchAllSiswaPPDB() ([]models.Siswa, error) {
+	var siswa []models.Siswa
+	err := config.DB.
+		Where("soft_deleted = ?", 2).
+		Preload("Satelit").
+		Find(&siswa).Error
+
+	return siswa, err
+}
+
+func FetchAllSiswaAlumni() ([]models.Siswa, error) {
+	var siswa []models.Siswa
+	err := config.DB.
+		Where("siswa_kelas_id > ?", 15).
+		Preload("Orangtua").
+		Preload("Kelas").
+		Preload("Satelit").
+		Preload("Agama").
+		Find(&siswa).Error
+
+	return siswa, err
+}
 
 // GET BY siswa_nis
 func FindSiswaByNis(nis string) ([]models.Siswa, error) {
