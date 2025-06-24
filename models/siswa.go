@@ -16,9 +16,10 @@ type Siswa struct {
 	SiswaEmail           string `json:"siswa_email" gorm:"column:siswa_email"`
 	SiswaDokumen         string `json:"siswa_dokumen" gorm:"column:siswa_dokumen"`
 	SiswaNoTelp          string `json:"siswa_no_telp" gorm:"column:siswa_no_telp"`
-	SiswaKelasID         int    `json:"-" gorm:"column:siswa_kelas_id"`
+	SiswaKelasID         int    `json:"siswa_kelas_id" gorm:"column:siswa_kelas_id"`
 	SiswaPhoto           string `json:"siswa_photo" gorm:"column:siswa_photo"`
 	SoftDeleted          int    `json:"soft_deleted" gorm:"column:soft_deleted"`
+	TglKeluar            string `json:"tgl_keluar" gorm:"column:tgl_keluar"`
 	AnakKe               int    `json:"anak_ke" gorm:"column:anak_ke"`
 	SekolahAsal          string `json:"sekolah_asal" gorm:"column:sekolah_asal"`
 	SatelitID            int    `json:"satelit" gorm:"column:satelit"`
