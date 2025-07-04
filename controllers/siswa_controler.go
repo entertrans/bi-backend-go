@@ -78,8 +78,12 @@ func GetSiswaWithOrtu(nis string) (*models.Siswa, error) {
 	var siswa models.Siswa
 
 	err := config.DB.
+	Where("siswa_nis = ?", nis).
 		Preload("Orangtua").
-		Where("siswa_nis = ?", nis).
+		Preload("Kelas").
+		Preload("Satelit").
+		Preload("Agama").
+
 		First(&siswa).Error
 
 	if err != nil {
