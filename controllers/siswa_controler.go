@@ -5,11 +5,12 @@ import (
 	"github.com/entertrans/bi-backend-go/models"
 )
 
-// GET ALL LENGKAP
+// READ
 func FetchAllSiswa() ([]models.Siswa, error) {
 	var siswa []models.Siswa
 	err := config.DB.
 		Preload("Orangtua").
+		Preload("Lampiran").
 		Preload("Agama").
 		Find(&siswa).Error
 
@@ -22,6 +23,7 @@ func FetchAllSiswaAktif() ([]models.Siswa, error) {
 	err := config.DB.
 		Where("soft_deleted = ? AND siswa_kelas_id < ?", 0, 16).
 		Preload("Orangtua").
+		Preload("Lampiran").
 		Preload("Kelas").
 		Preload("Satelit").
 		Preload("Agama").
@@ -67,9 +69,16 @@ func FetchAllSiswaAlumni() ([]models.Siswa, error) {
 }
 
 // GET BY siswa_nis
-func FindSiswaByNis(nis string) ([]models.Siswa, error) {
-	var siswa []models.Siswa
-	err := config.DB.Where("siswa_nis = ?", nis).Find(&siswa).Error
+func FindSiswaByNis(nis string) (models.Siswa, error) {
+	var siswa models.Siswa
+	err := config.DB.
+		Where("siswa_nis = ?", nis).
+		Preload("Orangtua").
+		Preload("Lampiran").
+		Preload("Kelas").
+		Preload("Satelit").
+		Preload("Agama").
+		First(&siswa).Error
 	return siswa, err
 }
 
@@ -91,3 +100,5 @@ func GetSiswaWithOrtu(nis string) (*models.Siswa, error) {
 	}
 	return &siswa, nil
 }
+
+//CREATE

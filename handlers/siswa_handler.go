@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GET /Siswa
+// READ
 func GetAllSiswa(c *gin.Context) {
 	nis := c.Query("siswa_nis")
 	if nis != "" {
@@ -85,3 +85,5 @@ func GetSiswaWithOrtu(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, data)
 }
+
+// CREATE

@@ -25,7 +25,7 @@ func SetupRouter() *gin.Engine {
 	r.Static("/uploads", "./uploads")
 
 	// ✅ Ping test
-	r.GET("/ping", func(c *gin.Context) {
+	r.GET("/pinga", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
@@ -36,7 +36,7 @@ func SetupRouter() *gin.Engine {
 	r.GET("/siswaaktif", handlers.GetAllSiswaAktif)   // all siswa aktif
 	r.GET("/siswakeluar", handlers.GetAllSiswaKeluar) // all siswa keluar
 	r.GET("/siswaalumni", handlers.GetAllSiswaAlumni) // all siswa alumni
-	r.GET("/siswa/:nis", handlers.GetSiswaWithOrtu)   // detail siswa + ortu
+	r.GET("/siswa/:nis", handlers.FindSiswaByNis)     // detail siswa + ortu
 
 	r.GET("/ortu", handlers.GetAllOrtu)         // semua ortu
 	r.GET("/ortu/:nis", handlers.FindOrtuByNis) // ortu berdasarkan NIS
@@ -46,6 +46,10 @@ func SetupRouter() *gin.Engine {
 	r.GET("/lookup/kelas", handlers.GetAllKelas)
 	r.GET("/lookup/satelit", handlers.GetAllSatelit)
 	r.GET("/lookup/tahun_ajaran", handlers.GetAllTA)
+
+	//etc
+	// r.GET("/api/cloudinary-signature", handlers.GenerateCloudinarySignature)
+	r.POST("/ppdb", handlers.HandleCreatePPDB)
 
 	return r
 }

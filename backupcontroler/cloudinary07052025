@@ -1,0 +1,63 @@
+package handlers
+
+import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+func GenerateCloudinarySignature(c *gin.Context) {
+	// Ambil parameter dari frontend
+	folder := c.Query("folder")
+	publicID := c.Query("public_id")
+
+	// Ganti dengan data kamu
+	apiKey := "786546378835215"                // <- CLOUDINARY_API_KEY kamu
+	apiSecret := "_AA5U8ky3lk1pT0o4cfnQ3saf3c" // <- CLOUDINARY_API_SECRET kamu
+	cloudName := "dalcsrtd9"                   // <- CLOUD NAME kamu
+
+	timestamp := fmt.Sprint(time.Now().Unix())
+
+	// Buat stringToSign: urutan alfabet
+	params := map[string]string{
+		"folder":     folder,
+		"public_id":  publicID,
+		"timestamp":  timestamp,
+		"overwrite":  "true",
+		"invalidate": "true",
+	}
+
+	var keys []string
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var toSign []string
+	for _, k := range keys {
+		toSign = append(toSign, fmt.Sprintf("%s=%s", k, params[k]))
+	}
+
+	stringToSign := strings.Join(toSign, "&") + apiSecret
+
+	// Hash SHA1
+	h := sha1.New()
+	h.Write([]byte(stringToSign))
+	signature := hex.EncodeToString(h.Sum(nil))
+
+	// Kirim JSON response ke frontend
+	c.JSON(http.StatusOK, gin.H{
+		"signature":  signature,
+		"timestamp":  timestamp,
+		"api_key":    apiKey,
+		"folder":     folder,
+		"public_id":  publicID,
+		"cloud_name": cloudName,
+	})
+}
