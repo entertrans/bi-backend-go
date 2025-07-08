@@ -3,15 +3,13 @@ package routers
 import (
 	"time"
 
-	"github.com/entertrans/bi-backend-go/handlers"
-	"github.com/gin-contrib/cors" // 🔥 WAJIB
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	// ✅ Middleware CORS yang lengkap
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -21,35 +19,16 @@ func SetupRouter() *gin.Engine {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// ✅ Serve static file untuk foto siswa (jika ada)
 	r.Static("/uploads", "./uploads")
 
-	// ✅ Ping test
-	r.GET("/pinga", func(c *gin.Context) {
+	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
 
-	// ✅ Routes
-	//siswa
-	r.GET("/siswa", handlers.GetAllSiswa)             // all siswa
-	r.GET("/siswappdb", handlers.GetAllSiswaPPDB)     // all siswa aktif
-	r.GET("/siswaaktif", handlers.GetAllSiswaAktif)   // all siswa aktif
-	r.GET("/siswakeluar", handlers.GetAllSiswaKeluar) // all siswa keluar
-	r.GET("/siswaalumni", handlers.GetAllSiswaAlumni) // all siswa alumni
-	r.GET("/siswa/:nis", handlers.FindSiswaByNis)     // detail siswa + ortu
-
-	r.GET("/ortu", handlers.GetAllOrtu)         // semua ortu
-	r.GET("/ortu/:nis", handlers.FindOrtuByNis) // ortu berdasarkan NIS
-
-	//lookup
-	r.GET("/lookup/agama", handlers.GetAllAgama)
-	r.GET("/lookup/kelas", handlers.GetAllKelas)
-	r.GET("/lookup/satelit", handlers.GetAllSatelit)
-	r.GET("/lookup/tahun_ajaran", handlers.GetAllTA)
-
-	//etc
-	// r.GET("/api/cloudinary-signature", handlers.GenerateCloudinarySignature)
-	r.POST("/ppdb", handlers.HandleCreatePPDB)
+	// 🔗 Panggil semua router modular
+	RegisterSiswaRoutes(r)
+	RegisterAdminRoutes(r)
+	RegisterGuruRoutes(r) // nanti isi
 
 	return r
 }

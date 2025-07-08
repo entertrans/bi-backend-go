@@ -1,17 +1,18 @@
-package handlers
+package adminhandlers
 
 import (
 	"net/http"
 
-	"github.com/entertrans/bi-backend-go/controllers"
+	adminControllers "github.com/entertrans/bi-backend-go/controllers/admin"
 	"github.com/gin-gonic/gin"
 )
 
 // GET /ortu
 func GetAllOrtu(c *gin.Context) {
 	nis := c.Query("siswa_nis")
+
 	if nis != "" {
-		data, err := controllers.FindOrtuByNis(nis)
+		data, err := adminControllers.FindOrtuByNis(nis)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -20,7 +21,7 @@ func GetAllOrtu(c *gin.Context) {
 		return
 	}
 
-	data, err := controllers.FetchAllOrtu()
+	data, err := adminControllers.FetchAllOrtu()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -32,7 +33,7 @@ func GetAllOrtu(c *gin.Context) {
 func FindOrtuByNis(c *gin.Context) {
 	nis := c.Param("nis")
 
-	data, err := controllers.FindOrtuByNis(nis)
+	data, err := adminControllers.FindOrtuByNis(nis)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
 		return

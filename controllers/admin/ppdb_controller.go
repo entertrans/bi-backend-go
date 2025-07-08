@@ -1,4 +1,4 @@
-package controllers
+package admincontrollers
 
 import (
 	"context"
@@ -19,6 +19,12 @@ import (
 func BoolPtr(b bool) *bool {
 	return &b
 }
+func StrPtr(s string) *string {
+	return &s
+}
+func IntPtr(i int) *int {
+	return &i
+}
 
 func UploadToCloudinary(file multipart.File, fileHeader *multipart.FileHeader, nis string, jenis string) (string, error) {
 	cld, err := cloudinary.NewFromParams(
@@ -30,12 +36,9 @@ func UploadToCloudinary(file multipart.File, fileHeader *multipart.FileHeader, n
 		return "", fmt.Errorf("gagal setup cloudinary: %v", err)
 	}
 
-	// Penamaan: lampiran/2026002/profile-picture-2026002.jpg
-	// publicID := fmt.Sprintf("lampiran/%s/%s-%s", nis, jenis, nis)
-
 	uploadParams := uploader.UploadParams{
-		PublicID:     fmt.Sprintf("%s-%s", jenis, nis), // profil-picture-2027002
-		Folder:       fmt.Sprintf("lampiran/%s", nis),  // folder lampiran/2027002
+		PublicID:     fmt.Sprintf("%s-%s", jenis, nis),
+		Folder:       fmt.Sprintf("lampiran/%s", nis),
 		Overwrite:    api.Bool(true),
 		ResourceType: "image",
 		Format:       "jpg",
@@ -56,7 +59,6 @@ func CreatePPDBSiswa(c *gin.Context) error {
 	jenkel := c.PostForm("jenkel")
 	satelitStr := c.PostForm("satelit")
 
-	// Validasi input
 	if nis == "" || nama == "" || nisn == "" || jenkel == "" || satelitStr == "" {
 		return fmt.Errorf("semua field wajib diisi")
 	}
@@ -66,7 +68,6 @@ func CreatePPDBSiswa(c *gin.Context) error {
 		return fmt.Errorf("satelit ID tidak valid: %v", err)
 	}
 
-	// Foto
 	file, err := c.FormFile("photo")
 	if err != nil {
 		return fmt.Errorf("foto wajib diunggah")
@@ -83,20 +84,20 @@ func CreatePPDBSiswa(c *gin.Context) error {
 		return fmt.Errorf("gagal upload ke cloudinary: %v", err)
 	}
 
-	// Simpan siswa
+	// gunakan pointer
 	siswa := models.Siswa{
-		SiswaNIS:    nis,
-		SiswaNISN:   nisn,
-		SiswaNama:   nama,
-		SiswaJenkel: jenkel,
-		SatelitID:   satelitID,
-		SoftDeleted: 2,
+		SiswaNIS:    StrPtr(nis),
+		SiswaNISN:   StrPtr(nisn),
+		SiswaNama:   StrPtr(nama),
+		SiswaJenkel: StrPtr(jenkel),
+		SatelitID:   IntPtr(satelitID),
+		SoftDeleted: IntPtr(2),
 	}
+
 	if err := config.DB.Create(&siswa).Error; err != nil {
 		return fmt.Errorf("gagal simpan siswa: %v", err)
 	}
 
-	// Simpan lampiran
 	lampiran := models.Lampiran{
 		SiswaNIS:     nis,
 		JenisDokumen: "profil-picture",

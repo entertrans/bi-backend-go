@@ -18,9 +18,6 @@ func GenerateCloudinarySignature(c *gin.Context) {
 	publicID := c.Query("public_id")
 
 	// Ganti dengan data kamu
-	apiKey := "786546378835215"                // <- CLOUDINARY_API_KEY kamu
-	apiSecret := "_AA5U8ky3lk1pT0o4cfnQ3saf3c" // <- CLOUDINARY_API_SECRET kamu
-	cloudName := "dalcsrtd9"                   // <- CLOUD NAME kamu
 
 	timestamp := fmt.Sprint(time.Now().Unix())
 

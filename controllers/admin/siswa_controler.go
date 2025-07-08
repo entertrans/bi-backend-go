@@ -1,4 +1,4 @@
-package controllers
+package admincontrollers
 
 import (
 	"github.com/entertrans/bi-backend-go/config"
@@ -49,7 +49,11 @@ func FetchAllSiswaPPDB() ([]models.Siswa, error) {
 	var siswa []models.Siswa
 	err := config.DB.
 		Where("soft_deleted = ?", 2).
+		Preload("Orangtua").
+		Preload("Lampiran").
+		Preload("Kelas").
 		Preload("Satelit").
+		Preload("Agama").
 		Find(&siswa).Error
 
 	return siswa, err
@@ -87,12 +91,11 @@ func GetSiswaWithOrtu(nis string) (*models.Siswa, error) {
 	var siswa models.Siswa
 
 	err := config.DB.
-	Where("siswa_nis = ?", nis).
+		Where("siswa_nis = ?", nis).
 		Preload("Orangtua").
 		Preload("Kelas").
 		Preload("Satelit").
 		Preload("Agama").
-
 		First(&siswa).Error
 
 	if err != nil {
@@ -101,4 +104,4 @@ func GetSiswaWithOrtu(nis string) (*models.Siswa, error) {
 	return &siswa, nil
 }
 
-//CREATE
+//Update
