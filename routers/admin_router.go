@@ -2,7 +2,6 @@ package routers
 
 import (
 	adminHandlers "github.com/entertrans/bi-backend-go/handlers/admin"
-	adminhandlers "github.com/entertrans/bi-backend-go/handlers/admin"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,8 +13,9 @@ func RegisterAdminRoutes(r *gin.Engine) {
 	r.GET("/siswakeluar", adminHandlers.GetAllSiswaKeluar)
 	r.GET("/siswaalumni", adminHandlers.GetAllSiswaAlumni)
 	r.GET("/siswa/:nis", adminHandlers.FindSiswaByNis)
-	r.PUT("/updatesiswa/:nis", adminhandlers.UpdateSiswaFieldHandler)
-	r.DELETE("/batalkan-siswa/:nis", adminhandlers.BatalkanSiswaHandler)
+	r.PUT("/updatesiswa/:nis", adminHandlers.UpdateSiswaFieldHandler)
+	r.DELETE("/batalkan-siswa/:nis", adminHandlers.BatalkanSiswaHandler)
+	r.PATCH("/siswa/:nis/terima", adminHandlers.TerimaSiswa)
 
 	// r.PATCH("/nis/:nis", adminHandlers.UpdateSiswaByNIS)
 
@@ -31,4 +31,5 @@ func RegisterAdminRoutes(r *gin.Engine) {
 
 	// ✅ Etc
 	r.POST("/ppdb", adminHandlers.HandleCreatePPDB)
+	r.POST("/api/upload-dokumen", adminHandlers.UploadDokumenHandler)
 }

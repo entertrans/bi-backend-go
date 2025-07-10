@@ -91,3 +91,14 @@ func GetSiswaWithOrtu(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, data)
 }
+
+func TerimaSiswa(c *gin.Context) {
+	nis := c.Param("nis")
+
+	if err := adminControllers.TerimaSiswa(nis); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menerima siswa."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Siswa diterima."})
+}

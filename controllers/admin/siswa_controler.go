@@ -105,3 +105,9 @@ func GetSiswaWithOrtu(nis string) (*models.Siswa, error) {
 }
 
 //Update
+
+func TerimaSiswa(nis string) error {
+	return config.DB.Model(&models.Siswa{}).
+		Where("siswa_nis = ?", nis).
+		Update("soft_deleted", 0).Error
+}
