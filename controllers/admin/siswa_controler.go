@@ -111,3 +111,20 @@ func TerimaSiswa(nis string) error {
 		Where("siswa_nis = ?", nis).
 		Update("soft_deleted", 0).Error
 }
+func SetKelasOnline(nis string, newValue int) error {
+	return config.DB.Model(&models.Siswa{}).
+		Where("siswa_nis = ?", nis).
+		Update("oc", newValue).Error
+}
+
+func SetKelasOffline(nis string, newValue int) error {
+	return config.DB.Model(&models.Siswa{}).
+		Where("siswa_nis = ?", nis).
+		Update("kc", newValue).Error
+}
+
+func KeluarkanSiswa(nis string) error {
+	return config.DB.Model(&models.Siswa{}).
+		Where("siswa_nis = ?", nis).
+		Update("soft_deleted", 1).Error
+}

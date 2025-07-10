@@ -2,6 +2,7 @@ package routers
 
 import (
 	adminHandlers "github.com/entertrans/bi-backend-go/handlers/admin"
+	adminhandlers "github.com/entertrans/bi-backend-go/handlers/admin"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,6 +17,9 @@ func RegisterAdminRoutes(r *gin.Engine) {
 	r.PUT("/updatesiswa/:nis", adminHandlers.UpdateSiswaFieldHandler)
 	r.DELETE("/batalkan-siswa/:nis", adminHandlers.BatalkanSiswaHandler)
 	r.PATCH("/siswa/:nis/terima", adminHandlers.TerimaSiswa)
+	r.PATCH("/siswa/:nis/keluarkan", adminhandlers.KeluarkanSiswa)
+	r.PATCH("/siswa/:nis/online", adminhandlers.SetKelasOnline)
+	r.PATCH("/siswa/:nis/offline", adminhandlers.SetKelasOffline)
 
 	// r.PATCH("/nis/:nis", adminHandlers.UpdateSiswaByNIS)
 

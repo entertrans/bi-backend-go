@@ -1,6 +1,7 @@
 package adminhandlers
 
 import (
+	"log"
 	"net/http"
 
 	adminControllers "github.com/entertrans/bi-backend-go/controllers/admin"
@@ -101,4 +102,55 @@ func TerimaSiswa(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Siswa diterima."})
+}
+
+func KeluarkanSiswa(c *gin.Context) {
+	nis := c.Param("nis")
+	log.Printf("[INFO] PATCH /siswa/%s/keluarkan", nis)
+
+	if err := adminControllers.KeluarkanSiswa(nis); err != nil {
+		log.Println("[ERROR]", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengeluarkan siswa."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Siswa dikeluarkan."})
+}
+
+func SetKelasOnline(c *gin.Context) {
+	nis := c.Param("nis")
+
+	var req struct {
+		Value int `json:"value"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid."})
+		return
+	}
+
+	if err := adminControllers.SetKelasOnline(nis, req.Value); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengubah status kelas online."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil mengubah kelas online."})
+}
+
+func SetKelasOffline(c *gin.Context) {
+	nis := c.Param("nis")
+
+	var req struct {
+		Value int `json:"value"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid."})
+		return
+	}
+
+	if err := adminControllers.SetKelasOffline(nis, req.Value); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengubah status kelas offline."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Berhasil mengubah kelas offline."})
 }
