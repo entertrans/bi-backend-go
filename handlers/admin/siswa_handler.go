@@ -8,6 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// search
+func SearchSiswa(c *gin.Context) {
+	adminControllers.SearchSiswa(c)
+}
+
 // GET /siswa
 func GetAllSiswa(c *gin.Context) {
 	nis := c.Query("siswa_nis")
@@ -108,7 +113,17 @@ func KeluarkanSiswa(c *gin.Context) {
 	nis := c.Param("nis")
 	log.Printf("[INFO] PATCH /siswa/%s/keluarkan", nis)
 
-	if err := adminControllers.KeluarkanSiswa(nis); err != nil {
+	var req struct {
+		TglKeluar *string `json:"tgl_keluar"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Println("[ERROR] Gagal binding JSON:", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format tanggal tidak valid."})
+		return
+	}
+
+	if err := adminControllers.KeluarkanSiswa(nis, req.TglKeluar); err != nil {
 		log.Println("[ERROR]", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengeluarkan siswa."})
 		return
