@@ -145,3 +145,82 @@ func TambahPenerimaKeInvoice(idInvoice string, input PenerimaInput) error {
 
 	return nil
 }
+
+func UpdatePotonganPenerima(c *gin.Context) {
+	var req struct {
+		IDPenerima uint `json:"id_penerima"`
+		Potongan   int  `json:"potongan"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Format data salah"})
+		return
+	}
+
+	if err := config.DB.Model(&models.InvoicePenerima{}).
+		Where("id = ?", req.IDPenerima).
+		Update("potongan", req.Potongan).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update potongan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Potongan diperbarui"})
+}
+
+func DeletePenerimaInvoice(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := config.DB.Delete(&models.InvoicePenerima{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menghapus penerima"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Penerima dihapus"})
+}
+
+func FindInvoicePenerimaByNIS(nis string) (*models.InvoicePenerima, error) {
+	var penerima models.InvoicePenerima
+
+	err := config.DB.
+		Preload("Siswa.Kelas").
+		Preload("Tambahan").
+		Preload("Invoice.Tagihan"). // ⚠️ ini yang sebelumnya error
+		Where("nis = ?", nis).
+		First(&penerima).Error
+
+	if err != nil {
+		return nil, errors.New("Penerima tidak ditemukan")
+	}
+
+	return &penerima, nil
+}
+
+type UpdateTambahanTagihanRequest struct {
+	TambahanTagihan []models.InvoicePenerimaTambahan `json:"tambahan_tagihan"`
+}
+
+func UpdateTambahanTagihanByPenerimaID(id uint, req UpdateTambahanTagihanRequest) error {
+	// 1. Pastikan penerima invoice-nya ada
+	var penerima models.InvoicePenerima
+	if err := config.DB.First(&penerima, id).Error; err != nil {
+		return errors.New("Penerima tidak ditemukan")
+	}
+
+	// 2. Hapus semua tagihan tambahan sebelumnya
+	if err := config.DB.Where("id_penerima = ?", id).Delete(&models.InvoicePenerimaTambahan{}).Error; err != nil {
+		return errors.New("Gagal menghapus tagihan tambahan lama")
+	}
+
+	// 3. Tambahkan tagihan tambahan baru (jika ada)
+	for _, item := range req.TambahanTagihan {
+		newItem := models.InvoicePenerimaTambahan{
+			IDPenerima:  id,
+			NamaTagihan: item.NamaTagihan,
+			Nominal:     item.Nominal,
+		}
+		if err := config.DB.Create(&newItem).Error; err != nil {
+			return errors.New("Gagal menyimpan tagihan tambahan baru")
+		}
+	}
+
+	return nil
+}

@@ -56,7 +56,12 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		invoice.GET("/cek", adminHandlers.CekInvoiceIDHandler)
 		invoice.GET("/by-id", adminHandlers.GetInvoiceByID)
 		invoice.GET("/penerima", adminHandlers.GetInvoicePenerima)
+		invoice.PUT("/penerima/potongan", adminHandlers.UpdatePotonganPenerima)
 		invoice.POST("/penerima/id", adminHandlers.TambahPenerimaInvoice)
+		invoice.DELETE("/penerima/:id", adminHandlers.DeletePenerimaInvoice)
+		invoice.GET("/penerima/:nis", adminHandlers.GetInvoicePenerimaByNIS)
+		// invoice.PUT("/penerima/:id/tambahan", adminHandlers.UpdateInvoicePenerimaTambahan)
+		invoice.PUT("/penerima/:id/tambahan", adminHandlers.HandleUpdateTambahanTagihan)
 
 	}
 
