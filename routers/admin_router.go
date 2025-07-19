@@ -48,6 +48,14 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		tagihan.DELETE("/:id/delete", adminhandlers.DeleteTagihan)
 	}
 
+	//pembayaran
+	pembayaran := r.Group("/pembayaran")
+	{
+		pembayaran.POST("", adminhandlers.BuatPembayaranHandler)
+		pembayaran.GET("/by-nis", adminhandlers.GetPembayaranByNISHandler)
+		pembayaran.GET("/:id", adminhandlers.GetPembayaranByPenerima)
+		pembayaran.DELETE("/:id", adminhandlers.DeletePembayaranHandler)
+	}
 	//invoice
 	invoice := r.Group("/invoice")
 	{
@@ -62,6 +70,13 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		invoice.GET("/penerima/:nis", adminHandlers.GetInvoicePenerimaByNIS)
 		// invoice.PUT("/penerima/:id/tambahan", adminHandlers.UpdateInvoicePenerimaTambahan)
 		invoice.PUT("/penerima/:id/tambahan", adminHandlers.HandleUpdateTambahanTagihan)
+		// invoice.GET("/pembayaran/detail", adminHandlers.GetInvoicePembayaranDetailHandler)
+
+	}
+
+	kwitansi := r.Group("/kwitansi")
+	{
+		kwitansi.GET("", adminhandlers.GetAllKwitansi)
 
 	}
 

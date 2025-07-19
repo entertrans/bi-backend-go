@@ -9,31 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// func UpdateInvoicePenerimaTambahan(c *gin.Context) {
-// 	idStr := c.Param("id")
-// 	id, err := strconv.Atoi(idStr)
-// 	if err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "ID tidak valid"})
-// 		return
-// 	}
-
-// 	var payload struct {
-// 		Tambahan []models.InvoicePenerimaTambahan `json:"tambahan_tagihan"`
-// 	}
-
-// 	if err := c.ShouldBindJSON(&payload); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Payload tidak valid"})
-// 		return
-// 	}
-
-// 	err = adminControllers.ReplaceInvoiceTambahan(uint(id), payload.Tambahan)
-// 	if err != nil {
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal menyimpan tambahan tagihan"})
-// 		return
-// 	}
-
-//		c.JSON(http.StatusOK, gin.H{"message": "Tambahan tagihan berhasil diperbarui"})
-//	}
 func HandleUpdateTambahanTagihan(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)

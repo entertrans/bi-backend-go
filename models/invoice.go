@@ -36,8 +36,10 @@ type InvoicePenerima struct {
 	Potongan  int                       `json:"potongan"`
 	Tambahan  []InvoicePenerimaTambahan `gorm:"foreignKey:IDPenerima" json:"tambahan_tagihan"`
 
-	Siswa   Siswa   `gorm:"foreignKey:NIS;references:SiswaNIS" json:"siswa"`
-	Invoice Invoice `gorm:"foreignKey:IDInvoice;references:IDInvoice" json:"invoice"` // ✅ tambahkan ini
+	Siswa      Siswa        `gorm:"foreignKey:NIS;references:SiswaNIS" json:"siswa"`
+	Pembayaran []Pembayaran `gorm:"foreignKey:IDPenerima;references:ID" json:"pembayaran"`
+	Invoice    Invoice      `gorm:"foreignKey:IDInvoice;references:IDInvoice" json:"invoice"` // ✅ tambahkan ini
+
 }
 
 func (InvoicePenerima) TableName() string {

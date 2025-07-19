@@ -64,6 +64,7 @@ func GetInvoiceByID(c *gin.Context) {
 	if err := config.DB.
 		Preload("Tagihan").
 		Preload("Penerima.Tambahan").
+		Preload("Penerima.Pembayaran").
 		Where("id_invoice = ?", id).
 		First(&invoice).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Invoice tidak ditemukan"})
@@ -80,6 +81,8 @@ func GetInvoicePenerima(c *gin.Context) {
 	err := config.DB.
 		Preload("Siswa.Kelas"). // preload juga relasi ke kelas
 		Preload("Tambahan").
+		Preload("Pembayaran").
+		// Preload("Penerima.Pembayaran").
 		Where("id_invoice = ?", idInvoice).
 		Find(&penerima).Error
 
