@@ -2,14 +2,15 @@ package models
 
 // === TABEL UTAMA: tbl_invoice ===
 type Invoice struct {
-	ID               uint              `gorm:"primaryKey" json:"id"`
-	IDInvoice        string            `gorm:"column:id_invoice;unique" json:"id_invoice"`
-	Deskripsi        string            `json:"deskripsi"`
-	TglInvoice       string            `json:"tgl_invoice"`
-	TglJatuhTempo    string            `json:"tgl_jatuh_tempo"`
-	SudahAdaPenerima bool              `json:"sudah_ada_penerima"`
-	Tagihan          []InvoiceTagihan  `gorm:"foreignKey:IDInvoice;references:IDInvoice" json:"tagihan"`
-	Penerima         []InvoicePenerima `gorm:"foreignKey:IDInvoice;references:IDInvoice" json:"penerima"`
+	ID               uint             `gorm:"primaryKey" json:"id"`
+	IDInvoice        string           `gorm:"column:id_invoice;unique" json:"id_invoice"`
+	Deskripsi        string           `json:"deskripsi"`
+	TglInvoice       string           `json:"tgl_invoice"`
+	TglJatuhTempo    string           `json:"tgl_jatuh_tempo"`
+	SudahAdaPenerima bool             `json:"sudah_ada_penerima"`
+	Tagihan          []InvoiceTagihan `gorm:"foreignKey:IDInvoice;references:IDInvoice" json:"tagihan"`
+
+	Penerima []InvoicePenerima `gorm:"foreignKey:IDInvoice;references:IDInvoice" json:"penerima"`
 }
 
 func (Invoice) TableName() string {
