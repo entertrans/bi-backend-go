@@ -74,6 +74,26 @@ func RegisterAdminRoutes(r *gin.Engine) {
 
 	}
 
+	PetyCash := r.Group("/")
+	{
+		// PetyCash.GET("/petty-cash", adminhandlers.GetPettyCashPeriodes)
+		// PetyCash.GET("/petty-cash/:lokasi", adminhandlers.GetPettyCashByLokasiHandler)
+		PetyCash.GET("/petty-cash/by-lokasi/:lokasi", adminhandlers.GetPettyCashByLokasiHandler)
+		PetyCash.GET("/petty-cash", adminhandlers.GetPettyCashPeriodeHandler)
+		PetyCash.POST("/petty-cash", adminhandlers.CreatePettyCashPeriode)
+		PetyCash.GET("/petty-cash/:id", adminhandlers.GetPettyCashPeriodeByID)
+		PetyCash.PUT("/petty-cash", adminhandlers.UpdatePettyCashPeriode)
+		PetyCash.DELETE("/petty-cash/:id", adminhandlers.DeletePettyCashPeriode)
+	}
+
+	Transaksi := r.Group("/transaksi")
+	{
+		Transaksi.GET("/:id", adminhandlers.GetTransaksiByPeriodeHandler)
+		Transaksi.POST("", adminhandlers.AddTransaksiHandler)
+		Transaksi.DELETE("/:id", adminhandlers.DeleteTransaksiHandler)
+
+	}
+
 	kwitansi := r.Group("/kwitansi")
 	{
 		kwitansi.GET("", adminhandlers.GetAllKwitansi)
