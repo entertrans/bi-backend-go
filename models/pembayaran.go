@@ -7,7 +7,7 @@ type Pembayaran struct {
 	IDPenerima uint
 	Tanggal    time.Time
 	Nominal    int
-	Metode     *string
+	Tujuan     *string
 	Keterangan *string
 	CreatedAt  time.Time
 }

@@ -13,7 +13,7 @@ type PembayaranInput struct {
 	IDPenerima uint    `json:"id_penerima"`
 	Tanggal    string  `json:"tanggal"` // format: "2006-01-02"
 	Nominal    int     `json:"nominal"`
-	Metode     *string `json:"metode"`     // nullable
+	Tujuan     *string `json:"tujuan"`     // nullable
 	Keterangan *string `json:"keterangan"` // nullable
 }
 
@@ -37,7 +37,7 @@ func SimpanPembayaran(input PembayaranInput) error {
 		IDPenerima: input.IDPenerima,
 		Tanggal:    tgl,
 		Nominal:    input.Nominal,
-		Metode:     input.Metode,
+		Tujuan:     input.Tujuan,
 		Keterangan: input.Keterangan,
 	}
 

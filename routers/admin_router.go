@@ -68,6 +68,7 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		invoice.POST("/penerima/id", adminHandlers.TambahPenerimaInvoice)
 		invoice.DELETE("/penerima/:id", adminHandlers.DeletePenerimaInvoice)
 		invoice.GET("/penerima/:nis", adminHandlers.GetInvoicePenerimaByNIS)
+		invoice.GET("/history/:nis", adminHandlers.HistoryKeuanganByNISHandler)
 		// invoice.PUT("/penerima/:id/tambahan", adminHandlers.UpdateInvoicePenerimaTambahan)
 		invoice.PUT("/penerima/:id/tambahan", adminHandlers.HandleUpdateTambahanTagihan)
 		// invoice.GET("/pembayaran/detail", adminHandlers.GetInvoicePembayaranDetailHandler)
@@ -76,8 +77,7 @@ func RegisterAdminRoutes(r *gin.Engine) {
 
 	PetyCash := r.Group("/")
 	{
-		// PetyCash.GET("/petty-cash", adminhandlers.GetPettyCashPeriodes)
-		// PetyCash.GET("/petty-cash/:lokasi", adminhandlers.GetPettyCashByLokasiHandler)
+
 		PetyCash.GET("/petty-cash/by-lokasi/:lokasi", adminhandlers.GetPettyCashByLokasiHandler)
 		PetyCash.GET("/petty-cash", adminhandlers.GetPettyCashPeriodeHandler)
 		PetyCash.POST("/petty-cash", adminhandlers.CreatePettyCashPeriode)

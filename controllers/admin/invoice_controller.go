@@ -14,6 +14,21 @@ type PenerimaInput struct {
 		NIS string `json:"nis"`
 	} `json:"penerima"`
 }
+type HistoryInvoice struct {
+	InvoiceID         string                           `json:"invoice_id"`
+	InvoiceDeskripsi  string                           `json:"invoice_deskripsi"`
+	InvoiceTgl        string                           `json:"invoice_tgl"`
+	InvoiceJatuhTempo string                           `json:"invoice_jatuh_tempo"`
+	TotalBayar        int                              `json:"totalBayar"`
+	Potongan          int                              `json:"potongan"`
+	Tagihan           []models.InvoiceTagihan          `json:"tagihan"`
+	TambahanTagihan   []models.InvoicePenerimaTambahan `json:"tambahan_tagihan"`
+}
+
+type HistorySiswaKeuangan struct {
+	Siswa   models.Siswa     `json:"siswa"`
+	History []HistoryInvoice `json:"history"`
+}
 
 func GetAllInvoice(c *gin.Context) {
 	var invoices []models.Invoice
@@ -186,6 +201,7 @@ func FindInvoicePenerimaByNIS(nis string) (*models.InvoicePenerima, error) {
 	err := config.DB.
 		Preload("Siswa.Kelas").
 		Preload("Tambahan").
+		Preload("Pembayaran").
 		Preload("Invoice.Tagihan"). // ⚠️ ini yang sebelumnya error
 		Where("nis = ?", nis).
 		First(&penerima).Error
@@ -195,6 +211,60 @@ func FindInvoicePenerimaByNIS(nis string) (*models.InvoicePenerima, error) {
 	}
 
 	return &penerima, nil
+}
+
+func GetHistoryKeuanganByNIS(nis string) (HistorySiswaKeuangan, error) {
+	var penerimas []models.InvoicePenerima
+	err := config.DB.Preload("Invoice.Tagihan").
+		Preload("Tambahan").
+		Preload("Pembayaran").
+		Preload("Siswa").
+		Preload("Siswa.Kelas").
+		Where("nis = ?", nis).
+		Find(&penerimas).Error
+	if err != nil {
+		return HistorySiswaKeuangan{}, err
+	}
+
+	var history []HistoryInvoice
+	var siswa models.Siswa
+
+	for _, penerima := range penerimas {
+		if siswa.SiswaNama == nil || *siswa.SiswaNama == "" {
+			siswa = penerima.Siswa
+		}
+
+		totalTagihan := 0
+		for _, tagihan := range penerima.Invoice.Tagihan {
+			totalTagihan += tagihan.Nominal
+		}
+		for _, tambahan := range penerima.Tambahan {
+			totalTagihan += tambahan.Nominal
+		}
+		totalTagihan -= penerima.Potongan
+
+		totalBayar := 0
+		for _, bayar := range penerima.Pembayaran {
+			totalBayar += bayar.Nominal
+		}
+
+		history = append(history, HistoryInvoice{
+			InvoiceID:         penerima.Invoice.IDInvoice,
+			InvoiceDeskripsi:  penerima.Invoice.Deskripsi,
+			InvoiceTgl:        penerima.Invoice.TglInvoice,    // tanpa .Format
+			InvoiceJatuhTempo: penerima.Invoice.TglJatuhTempo, // tanpa .Format
+			Potongan:          penerima.Potongan,
+			Tagihan:           penerima.Invoice.Tagihan,
+			TambahanTagihan:   penerima.Tambahan,
+			TotalBayar:        totalBayar,
+		})
+
+	}
+
+	return HistorySiswaKeuangan{
+		Siswa:   siswa,
+		History: history,
+	}, nil
 }
 
 type UpdateTambahanTagihanRequest struct {

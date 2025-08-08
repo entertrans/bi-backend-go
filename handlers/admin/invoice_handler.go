@@ -91,3 +91,13 @@ func GetInvoicePenerimaByNIS(c *gin.Context) {
 
 	c.JSON(http.StatusOK, penerima)
 }
+
+func HistoryKeuanganByNISHandler(c *gin.Context) {
+	nis := c.Param("nis")
+	result, err := adminControllers.GetHistoryKeuanganByNIS(nis)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, result)
+}
