@@ -24,6 +24,7 @@ type HistoryInvoice struct {
 	Potongan          int                              `json:"potongan"`
 	Tagihan           []models.InvoiceTagihan          `json:"tagihan"`
 	TambahanTagihan   []models.InvoicePenerimaTambahan `json:"tambahan_tagihan"`
+	Pembayaran        []models.Pembayaran              `json:"pembayaran"` // <--- ini tambahannya
 }
 
 type HistorySiswaKeuangan struct {
@@ -253,15 +254,15 @@ func GetHistoryKeuanganByNIS(nis string) (HistorySiswaKeuangan, error) {
 		history = append(history, HistoryInvoice{
 			InvoiceID:         penerima.Invoice.IDInvoice,
 			InvoiceDeskripsi:  penerima.Invoice.Deskripsi,
-			InvoiceTgl:        penerima.Invoice.TglInvoice,    // tanpa .Format
-			InvoiceJatuhTempo: penerima.Invoice.TglJatuhTempo, // tanpa .Format
+			InvoiceTgl:        penerima.Invoice.TglInvoice,
+			InvoiceJatuhTempo: penerima.Invoice.TglJatuhTempo,
 			Potongan:          penerima.Potongan,
 			Tagihan:           penerima.Invoice.Tagihan,
 			TambahanTagihan:   penerima.Tambahan,
 			TotalTagihan:      totalTagihan,
 			TotalBayar:        totalBayar,
+			Pembayaran:        penerima.Pembayaran, // <--- disini dikirim ke frontend
 		})
-
 	}
 
 	return HistorySiswaKeuangan{
