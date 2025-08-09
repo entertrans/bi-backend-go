@@ -19,6 +19,7 @@ type HistoryInvoice struct {
 	InvoiceDeskripsi  string                           `json:"invoice_deskripsi"`
 	InvoiceTgl        string                           `json:"invoice_tgl"`
 	InvoiceJatuhTempo string                           `json:"invoice_jatuh_tempo"`
+	TotalTagihan      int                              `json:"totalTagihan"`
 	TotalBayar        int                              `json:"totalBayar"`
 	Potongan          int                              `json:"potongan"`
 	Tagihan           []models.InvoiceTagihan          `json:"tagihan"`
@@ -228,6 +229,7 @@ func GetHistoryKeuanganByNIS(nis string) (HistorySiswaKeuangan, error) {
 
 	var history []HistoryInvoice
 	var siswa models.Siswa
+	// var tagihanList []models.Tagihan
 
 	for _, penerima := range penerimas {
 		if siswa.SiswaNama == nil || *siswa.SiswaNama == "" {
@@ -256,6 +258,7 @@ func GetHistoryKeuanganByNIS(nis string) (HistorySiswaKeuangan, error) {
 			Potongan:          penerima.Potongan,
 			Tagihan:           penerima.Invoice.Tagihan,
 			TambahanTagihan:   penerima.Tambahan,
+			TotalTagihan:      totalTagihan,
 			TotalBayar:        totalBayar,
 		})
 
