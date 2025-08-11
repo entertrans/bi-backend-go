@@ -7,22 +7,35 @@ import (
 	"github.com/entertrans/bi-backend-go/models"
 )
 
-func GetBankSoalByStatus(isDeleted bool) ([]models.TO_BankSoal, error) {
+func GetActiveBankSoal() ([]models.TO_BankSoal, error) {
 	var soals []models.TO_BankSoal
-	if isDeleted {
-		err := config.DB.Unscoped().Where("deleted_at IS NOT NULL").Find(&soals).Error
-		return soals, err
-	} else {
-		err := config.DB.Where("deleted_at IS NULL").Find(&soals).Error
-		return soals, err
-	}
+	err := config.DB.
+		Preload("Guru").
+		Where("deleted_at IS NULL").
+		Order("created_at desc").
+		Find(&soals).Error
+	return soals, err
+}
+func GetInactiveBankSoal() ([]models.TO_BankSoal, error) {
+	var soal []models.TO_BankSoal
+	err := config.DB.
+		Unscoped().
+		Preload("Guru").
+		Where("deleted_at IS NOT NULL").
+		Find(&soal).Error
+	return soal, err
 }
 
 func RestoreBankSoal(soalID uint) error {
-	return config.DB.Model(&models.TO_BankSoal{}).
+	// Menghapus nilai DeletedAt supaya soal jadi aktif lagi (soft undelete)
+	result := config.DB.Model(&models.TO_BankSoal{}).
 		Unscoped().
 		Where("soal_id = ?", soalID).
-		Update("deleted_at", nil).Error
+		Update("deleted_at", nil)
+	if result.RowsAffected == 0 {
+		return errors.New("bank soal tidak ditemukan")
+	}
+	return result.Error
 }
 
 func CreateBankSoal(soal *models.TO_BankSoal) error {
@@ -31,7 +44,11 @@ func CreateBankSoal(soal *models.TO_BankSoal) error {
 
 func GetBankSoalByGuru(guruID uint) ([]models.TO_BankSoal, error) {
 	var soals []models.TO_BankSoal
-	err := config.DB.Where("guru_id = ?", guruID).Find(&soals).Error
+	err := config.DB.
+		Preload("Guru").
+		Where("guru_id = ? AND is_deleted = false", guruID).
+		Order("created_at desc").
+		Find(&soals).Error
 	return soals, err
 }
 

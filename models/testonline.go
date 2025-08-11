@@ -101,6 +101,7 @@ type TO_BankSoal struct {
 	GuruID         uint           `json:"guru_id" gorm:"column:guru_id"`
 	Mapel          string         `json:"mapel" gorm:"column:mapel"`
 	TipeSoal       string         `json:"tipe_soal" gorm:"column:tipe_soal"`
+	KelasID        uint           `json:"kelas_id" gorm:"column:kelas_id"`
 	Pertanyaan     string         `json:"pertanyaan" gorm:"column:pertanyaan"`
 	PilihanJawaban string         `json:"pilihan_jawaban" gorm:"column:pilihan_jawaban;type:json"`
 	JawabanBenar   string         `json:"jawaban_benar" gorm:"column:jawaban_benar;type:json"`
@@ -109,7 +110,8 @@ type TO_BankSoal struct {
 	DeletedAt      gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relasi
-	Guru Guru `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
+	Guru  Guru  `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
+	Kelas Kelas `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
 }
 
 func (TO_BankSoal) TableName() string {

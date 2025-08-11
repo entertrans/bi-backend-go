@@ -10,7 +10,7 @@ import (
 )
 
 func GetActiveBankSoalHandler(c *gin.Context) {
-	soal, err := gurucontrollers.GetBankSoalByStatus(false) // false = not deleted
+	soal, err := gurucontrollers.GetActiveBankSoal()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil bank soal aktif"})
 		return
@@ -19,28 +19,12 @@ func GetActiveBankSoalHandler(c *gin.Context) {
 }
 
 func GetInactiveBankSoalHandler(c *gin.Context) {
-	soal, err := gurucontrollers.GetBankSoalByStatus(true) // true = deleted
+	soal, err := gurucontrollers.GetInactiveBankSoal()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil bank soal nonaktif"})
 		return
 	}
 	c.JSON(http.StatusOK, soal)
-}
-
-func RestoreBankSoalHandler(c *gin.Context) {
-	soalIDStr := c.Param("soal_id")
-	soalID, err := strconv.ParseUint(soalIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Soal ID tidak valid"})
-		return
-	}
-
-	err = gurucontrollers.RestoreBankSoal(uint(soalID))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal restore bank soal"})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "Bank soal berhasil direstore"})
 }
 
 func GetBankSoalHandler(c *gin.Context) {
@@ -111,4 +95,20 @@ func DeleteBankSoalHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Soal berhasil dihapus"})
+}
+func RestoreBankSoalHandler(c *gin.Context) {
+	soalIDStr := c.Param("soal_id")
+	soalID, err := strconv.ParseUint(soalIDStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Soal ID tidak valid"})
+		return
+	}
+
+	err = gurucontrollers.RestoreBankSoal(uint(soalID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengembalikan bank soal"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Bank soal berhasil direstore"})
 }
