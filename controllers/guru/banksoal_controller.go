@@ -11,6 +11,7 @@ func GetActiveBankSoal() ([]models.TO_BankSoal, error) {
 	var soals []models.TO_BankSoal
 	err := config.DB.
 		Preload("Guru").
+		Preload("Kelas").
 		Where("deleted_at IS NULL").
 		Order("created_at desc").
 		Find(&soals).Error

@@ -32,8 +32,8 @@ func (Guru) TableName() string {
 type Mapel struct {
 	KdMapel   uint      `gorm:"column:kd_mapel;primaryKey;autoIncrement" json:"kd_mapel"`
 	NmMapel   string    `gorm:"column:nm_mapel;size:150;not null" json:"nm_mapel"`
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
+	// CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
+	// UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 
 	// Relasi ke guru_mapel
 	GuruMapels []GuruMapel `gorm:"foreignKey:KdMapel;references:KdMapel" json:"guru_mapels"`
