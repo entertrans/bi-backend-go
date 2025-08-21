@@ -12,9 +12,11 @@ func RegisterGuruRoutes(r *gin.Engine) {
 	{
 		// Routes bank soal
 		guruGroup.GET("/:guru_id/banksoal", guruhandlers.GetBankSoalHandler)
-		guruGroup.POST("/banksoal", guruhandlers.CreateBankSoalHandler)
-		guruGroup.PATCH("/banksoal/:soal_id", guruhandlers.UpdateBankSoalHandler)
+		// buat bank soal
+		// guruGroup.POST("/banksoal", guruhandlers.CreateBankSoalHandler)
+		// guruGroup.PATCH("/banksoal/:soal_id", guruhandlers.UpdateBankSoalHandler)
 		guruGroup.DELETE("/banksoal/:soal_id", guruhandlers.DeleteBankSoalHandler)
+
 
 		// Routes test online
 		guruGroup.GET("/test/:test_id", guruhandlers.GetTestHandler)
@@ -33,5 +35,14 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		guruGroup.GET("/banksoal/inactive", guruhandlers.GetInactiveBankSoalHandler)
 		guruGroup.PATCH("/banksoal/:soal_id/restore", guruhandlers.RestoreBankSoalHandler)
 
+	}
+	lampiran := r.Group("/lampiran")
+	{
+		lampiran.GET("/active", guruhandlers.GetActiveLampiranHandler)
+		lampiran.GET("/trash", guruhandlers.GetInactiveLampiranHandler)
+		lampiran.POST("/upload", guruhandlers.UploadLampiranHandler)
+		lampiran.DELETE("/:lampiran_id", guruhandlers.DeleteLampiranHandler)
+		lampiran.PUT("/restore/:lampiran_id", guruhandlers.RestoreLampiranHandler)
+		lampiran.DELETE("/hard/:lampiran_id", guruhandlers.HardDeleteLampiranHandler)
 	}
 }

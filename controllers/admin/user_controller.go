@@ -1,8 +1,11 @@
 package admincontrollers
 
 import (
+	"net/http"
+
 	"github.com/entertrans/bi-backend-go/config"
 	"github.com/entertrans/bi-backend-go/models"
+	"github.com/gin-gonic/gin"
 )
 
 func GetAllMapel() ([]models.Mapel, error) {
@@ -21,3 +24,26 @@ func GetAllMapelWithGuruMapels() ([]models.Mapel, error) {
         Find(&mapels).Error
     return mapels, err
 }
+
+func GetMapelByKelas(c *gin.Context) {
+	kelasID := c.Param("id") // ambil dari /mapel-by-kelas/:id
+	if kelasID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "kelas_id wajib diisi"})
+		return
+	}
+
+	var kelasMapels []models.KelasMapel
+	err := config.DB.
+		Preload("Mapel").
+		Where("kelas_id = ?", kelasID).
+		Find(&kelasMapels).Error
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data mapel"})
+		return
+	}
+
+	c.JSON(http.StatusOK, kelasMapels)
+}
+
+

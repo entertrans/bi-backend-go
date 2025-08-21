@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/entertrans/bi-backend-go/config"
+	adminControllers "github.com/entertrans/bi-backend-go/controllers/admin"
 	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
 )
@@ -55,4 +56,8 @@ func GetAllTA(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, Ta)
+}
+
+func GetMapelByKelas(c *gin.Context) {
+	adminControllers.GetMapelByKelas(c)
 }

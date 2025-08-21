@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	gurucontrollers "github.com/entertrans/bi-backend-go/controllers/guru"
-	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -44,42 +43,6 @@ func GetBankSoalHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, soal)
 }
 
-func CreateBankSoalHandler(c *gin.Context) {
-	var soal models.TO_BankSoal
-	if err := c.ShouldBindJSON(&soal); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Data soal tidak valid"})
-		return
-	}
-
-	if err := gurucontrollers.CreateBankSoal(&soal); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat soal"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Soal berhasil dibuat", "soal_id": soal.SoalID})
-}
-
-func UpdateBankSoalHandler(c *gin.Context) {
-	soalIDStr := c.Param("soal_id")
-	soalID, err := strconv.ParseUint(soalIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Soal ID tidak valid"})
-		return
-	}
-
-	var data map[string]interface{}
-	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Data soal tidak valid"})
-		return
-	}
-
-	if err := gurucontrollers.UpdateBankSoal(uint(soalID), data); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update soal"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Soal berhasil diupdate"})
-}
 
 func DeleteBankSoalHandler(c *gin.Context) {
 	soalIDStr := c.Param("soal_id")

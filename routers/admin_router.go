@@ -38,6 +38,7 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		lookup.GET("/satelit", adminHandlers.GetAllSatelit)
 		lookup.GET("/tahun_ajaran", adminHandlers.GetAllTA)
 		lookup.GET("/mapel", adminHandlers.GetMapelHandler)
+		lookup.GET("/mapel-by-kelas/:id", adminHandlers.GetMapelByKelas)
 	}
 
 	// ✅ tagihan
