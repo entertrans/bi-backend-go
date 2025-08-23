@@ -21,6 +21,7 @@ type TO_Test struct {
 	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
 
 	// Relasi
+
 	Guru  Guru  `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
 	Kelas Kelas `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
 }
@@ -97,14 +98,13 @@ func (TO_JawabanFinal) TableName() string {
 // 5. TO_BankSoal
 // =========================
 type TO_BankSoal struct {
-	SoalID         uint           `json:"soal_id" gorm:"column:soal_id;primaryKey;autoIncrement"`
-	SoalUID        string         `json:"soal_uid" gorm:"column:soal_uid;unique"`
+	SoalID uint `json:"soal_id" gorm:"column:soal_id;primaryKey;autoIncrement"`
+	// SoalUID        string         `json:"soal_uid" gorm:"column:soal_uid;unique"`
 	GuruID         uint           `json:"guru_id" gorm:"column:guru_id"`
-	Mapel          string         `json:"mapel" gorm:"column:mapel"`
+	MapelID        uint           `gorm:"column:mapel_id;not null" json:"mapel_id"`
 	TipeSoal       string         `json:"tipe_soal" gorm:"column:tipe_soal"`
 	KelasID        uint           `json:"kelas_id" gorm:"column:kelas_id"`
 	Pertanyaan     string         `json:"pertanyaan" gorm:"column:pertanyaan"`
-	// 🔽🔽 baru:
 	LampiranID     *uint          `json:"lampiran_id" gorm:"column:lampiran_id"` // boleh null
 	PilihanJawaban string         `json:"pilihan_jawaban" gorm:"column:pilihan_jawaban;type:json"`
 	JawabanBenar   string         `json:"jawaban_benar" gorm:"column:jawaban_benar;type:json"`
@@ -115,9 +115,9 @@ type TO_BankSoal struct {
 	// Relasi
 	Guru     Guru         `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
 	Kelas    Kelas        `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
+	Mapel    Mapel        `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
 	Lampiran *TO_Lampiran `json:"lampiran" gorm:"foreignKey:LampiranID;references:LampiranID"`
 }
-
 
 func (TO_BankSoal) TableName() string {
 	return "TO_BankSoal"
@@ -145,13 +145,13 @@ func (TO_PenilaianGuru) TableName() string {
 // 7. TO_Lampiran (gallery bersama, soft delete)
 // =========================
 type TO_Lampiran struct {
-	LampiranID uint             `json:"lampiran_id" gorm:"column:lampiran_id;primaryKey;autoIncrement"`
-	NamaFile   string           `json:"nama_file" gorm:"column:nama_file"`
-	PathFile   string           `json:"path_file" gorm:"column:path_file;type:text"` // simpan path/URL file
-	TipeFile   string           `json:"tipe_file" gorm:"column:tipe_file"`           // image/pdf/audio/video/other
-	Deskripsi  string           `json:"deskripsi" gorm:"column:deskripsi"`
-	CreatedAt  time.Time        `json:"created_at" gorm:"column:created_at"`
-	DeletedAt  gorm.DeletedAt   `json:"deleted_at,omitempty" gorm:"index"`           // soft delete (trash)
+	LampiranID uint           `json:"lampiran_id" gorm:"column:lampiran_id;primaryKey;autoIncrement"`
+	NamaFile   string         `json:"nama_file" gorm:"column:nama_file"`
+	PathFile   string         `json:"path_file" gorm:"column:path_file;type:text"` // simpan path/URL file
+	TipeFile   string         `json:"tipe_file" gorm:"column:tipe_file"`           // image/pdf/audio/video/other
+	Deskripsi  string         `json:"deskripsi" gorm:"column:deskripsi"`
+	CreatedAt  time.Time      `json:"created_at" gorm:"column:created_at"`
+	DeletedAt  gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"` // soft delete (trash)
 }
 
 func (TO_Lampiran) TableName() string {

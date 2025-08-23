@@ -35,6 +35,7 @@ func RegisterAdminRoutes(r *gin.Engine) {
 	{
 		lookup.GET("/agama", adminHandlers.GetAllAgama)
 		lookup.GET("/kelas", adminHandlers.GetAllKelas)
+		lookup.GET("/detail/:kelas_id/:mapel_id", adminhandlers.GetDetailLookup)
 		lookup.GET("/satelit", adminHandlers.GetAllSatelit)
 		lookup.GET("/tahun_ajaran", adminHandlers.GetAllTA)
 		lookup.GET("/mapel", adminHandlers.GetMapelHandler)
