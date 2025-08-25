@@ -46,4 +46,16 @@ func GetMapelByKelas(c *gin.Context) {
 	c.JSON(http.StatusOK, kelasMapels)
 }
 
+func GetSiswaByKelas(kelasID uint) ([]models.Siswa, error) {
+	var siswa []models.Siswa
+	err := config.DB.
+		Preload("Kelas").
+		// Preload("Agama").
+		// Preload("Satelit").
+		Where("siswa_kelas_id = ? AND (soft_deleted IS NULL OR soft_deleted = 0)", kelasID).
+		Order("siswa_nama ASC").
+		Find(&siswa).Error
+
+	return siswa, err
+}
 

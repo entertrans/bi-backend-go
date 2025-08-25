@@ -29,7 +29,6 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		guruGroup.GET("/test/:test_id", guruhandlers.GetTestHandler)
 		guruGroup.PUT("/test/:test_id", guruhandlers.UpdateTestHandler)
 		guruGroup.DELETE("/test/:test_id", guruhandlers.DeleteTestHandler)
-
 		// Routes penilaian
 		// guruGroup.GET("/penilaian/:final_id", guruhandlers.GetPenilaianHandler)
 		// guruGroup.POST("/penilaian", guruhandlers.CreatePenilaianHandler)
@@ -39,6 +38,15 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		// routes
 
 	}
+	testquis := r.Group("/testquis")
+	{
+		// test
+		testquis.POST("/peserta", guruhandlers.AddPesertaHandler)                    // tambah 1 peserta
+		testquis.GET("/peserta/test/:test_id", guruhandlers.GetPesertaByTestHandler) // ambil semua peserta by test
+		testquis.PUT("/peserta/:peserta_id", guruhandlers.UpdatePesertaHandler)      // update peserta
+		testquis.DELETE("/peserta/:peserta_id", guruhandlers.DeletePesertaHandler)   // hapus peserta
+	}
+
 	lampiran := r.Group("/lampiran")
 	{
 		lampiran.GET("/active", guruhandlers.GetActiveLampiranHandler)

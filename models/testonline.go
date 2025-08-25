@@ -33,6 +33,31 @@ func (TO_Test) TableName() string {
 }
 
 // =========================
+// TO_Peserta
+// =========================
+type TO_Peserta struct {
+	PesertaID  uint      `json:"peserta_id" gorm:"column:peserta_id;primaryKey;autoIncrement"`
+	TestID     uint      `json:"test_id" gorm:"column:test_id"`
+	SiswaNIS   string    `json:"siswa_nis" gorm:"column:siswa_nis"`
+	Status     string    `json:"status" gorm:"column:status;default:not_started"`
+	ExtraTime  int       `json:"extra_time" gorm:"column:extra_time"`
+	NilaiAwal  float64   `json:"nilai_awal" gorm:"column:nilai_awal"`
+	NilaiAkhir float64   `json:"nilai_akhir" gorm:"column:nilai_akhir"`
+	CreatedAt  time.Time `json:"created_at" gorm:"column:created_at"`
+	UpdatedAt  time.Time `json:"updated_at" gorm:"column:updated_at"`
+
+	// Relasi
+	Test  TO_Test `json:"test" gorm:"foreignKey:TestID;references:TestID"`
+	Siswa Siswa   `json:"siswa" gorm:"foreignKey:SiswaNIS;references:SiswaNIS"`
+}
+
+func (TO_Peserta) TableName() string {
+	return "to_peserta"
+}
+
+
+
+// =========================
 // 2. TO_TestSession
 // =========================
 type TO_TestSession struct {

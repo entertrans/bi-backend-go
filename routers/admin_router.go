@@ -40,6 +40,7 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		lookup.GET("/tahun_ajaran", adminHandlers.GetAllTA)
 		lookup.GET("/mapel", adminHandlers.GetMapelHandler)
 		lookup.GET("/mapel-by-kelas/:id", adminHandlers.GetMapelByKelas)
+		lookup.GET("/kelas/:kelas_id", adminHandlers.GetSiswaByKelasHandler)
 	}
 
 	// ✅ tagihan
