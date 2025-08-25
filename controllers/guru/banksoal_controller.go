@@ -58,15 +58,29 @@ func GetInactiveBankSoal() ([]models.TO_BankSoal, error) {
 // ========================
 // Restore soal (hapus deleted_at)
 // ========================
-func RestoreBankSoal(soalID uint) error {
-	result := config.DB.Model(&models.TO_BankSoal{}).
-		Unscoped().
+func RestoreBankSoal(soalID uint) (*models.TO_BankSoal, error) {
+	var soal models.TO_BankSoal
+
+	// Ambil data termasuk yang soft-deleted
+	if err := config.DB.Unscoped().
 		Where("soal_id = ?", soalID).
-		Update("deleted_at", nil)
-	if result.RowsAffected == 0 {
-		return errors.New("bank soal tidak ditemukan")
+		First(&soal).Error; err != nil {
+		return nil, err
 	}
-	return result.Error
+
+	// Update deleted_at supaya NULL → restore
+	if err := config.DB.Unscoped().
+		Model(&soal).
+		Update("deleted_at", nil).Error; err != nil {
+		return nil, err
+	}
+
+	// Refresh data setelah diupdate
+	if err := config.DB.First(&soal, soalID).Error; err != nil {
+		return nil, err
+	}
+
+	return &soal, nil
 }
 
 // ========================
@@ -100,7 +114,6 @@ func DeleteBankSoal(soalID uint) error {
 // Membuat soal baru
 // ========================
 func SimpanSoal(input BankSoalInput) error {
-	// Validasi dasar
 	if input.GuruID == 0 {
 		return errors.New("guru_id wajib diisi")
 	}
@@ -110,29 +123,59 @@ func SimpanSoal(input BankSoalInput) error {
 	if input.Pertanyaan == "" {
 		return errors.New("pertanyaan wajib diisi")
 	}
-	if input.PilihanJawaban == "" {
-		return errors.New("pilihan_jawaban wajib diisi")
-	}
-	if input.JawabanBenar == "" {
-		return errors.New("jawaban_benar wajib diisi")
-	}
 
-	// Validasi format JSON pilihan_jawaban
-	var tmp []string
-	if err := json.Unmarshal([]byte(input.PilihanJawaban), &tmp); err != nil {
-		return errors.New("format pilihan_jawaban tidak valid (harus array string)")
-	}
-	if len(tmp) == 0 {
-		return errors.New("pilihan_jawaban tidak boleh kosong")
-	}
+	// Validasi pilihan_jawaban & jawaban_benar sesuai tipe_soal
+	switch input.TipeSoal {
+	case "pg":
+		// pilihan_jawaban: []string, jawaban_benar: [string]
+		var pj []string
+		if err := json.Unmarshal([]byte(input.PilihanJawaban), &pj); err != nil {
+			return errors.New("pilihan_jawaban untuk PG harus array string")
+		}
+		var jb []string
+		if err := json.Unmarshal([]byte(input.JawabanBenar), &jb); err != nil {
+			return errors.New("jawaban_benar untuk PG harus array string")
+		}
 
-	// Validasi format JSON jawaban_benar (harus array int)
-	var ans []int
-	if err := json.Unmarshal([]byte(input.JawabanBenar), &ans); err != nil {
-		return errors.New("format jawaban_benar tidak valid (harus array int)")
-	}
-	if len(ans) == 0 {
-		return errors.New("jawaban_benar tidak boleh kosong")
+	case "pg_kompleks":
+		// pilihan_jawaban: []string, jawaban_benar: []string
+		var pj []string
+		if err := json.Unmarshal([]byte(input.PilihanJawaban), &pj); err != nil {
+			return errors.New("pilihan_jawaban untuk PG Kompleks harus array string")
+		}
+		var jb []string
+		if err := json.Unmarshal([]byte(input.JawabanBenar), &jb); err != nil {
+			return errors.New("jawaban_benar untuk PG Kompleks harus array string")
+		}
+
+	case "matching":
+		// pilihan_jawaban: array object {left,right,leftLampiran,rightLampiran}
+		var pj []map[string]interface{}
+		if err := json.Unmarshal([]byte(input.PilihanJawaban), &pj); err != nil {
+			return errors.New("pilihan_jawaban untuk Matching harus array object")
+		}
+		// jawaban_benar biasanya kosong → cukup validasi bisa unmarshal ke array
+		var jb []interface{}
+		if err := json.Unmarshal([]byte(input.JawabanBenar), &jb); err != nil {
+			return errors.New("jawaban_benar untuk Matching harus array")
+		}
+
+	case "bs":
+		// jawaban_benar: [string]
+		var jb []string
+		if err := json.Unmarshal([]byte(input.JawabanBenar), &jb); err != nil {
+			return errors.New("jawaban_benar untuk BS harus array string")
+		}
+
+	case "uraian", "isian_singkat":
+		// jawaban_benar: [string] (biasanya satu)
+		var jb []string
+		if err := json.Unmarshal([]byte(input.JawabanBenar), &jb); err != nil {
+			return errors.New("jawaban_benar untuk Uraian/Isian harus array string")
+		}
+
+	default:
+		return errors.New("tipe_soal tidak dikenali")
 	}
 
 	// Simpan ke DB

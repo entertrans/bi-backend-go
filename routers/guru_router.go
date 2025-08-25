@@ -20,19 +20,21 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		guruGroup.DELETE("/banksoal/:soal_id", guruhandlers.DeleteBankSoalHandler)
 		guruGroup.GET("/banksoal", guruhandlers.GetActiveBankSoalHandler)
 		guruGroup.GET("/banksoal/inactive", guruhandlers.GetInactiveBankSoalHandler)
-		guruGroup.PATCH("/banksoal/:soal_id/restore", guruhandlers.RestoreBankSoalHandler)
+		guruGroup.PUT("/banksoal/:soal_id/restore", guruhandlers.RestoreBankSoalHandler)
 
 		// Routes test online
-		guruGroup.GET("/test/:test_id", guruhandlers.GetTestHandler)
 		guruGroup.POST("/test", guruhandlers.CreateTestHandler)
-		guruGroup.PATCH("/test/:test_id", guruhandlers.UpdateTestHandler)
+		guruGroup.GET("/test/type/:type_test", guruhandlers.GetTestByType)
+		guruGroup.GET("/test/guru/:guru_id", guruhandlers.GetTestsByGuruHandler)
+		guruGroup.GET("/test/:test_id", guruhandlers.GetTestHandler)
+		guruGroup.PUT("/test/:test_id", guruhandlers.UpdateTestHandler)
 		guruGroup.DELETE("/test/:test_id", guruhandlers.DeleteTestHandler)
 
 		// Routes penilaian
-		guruGroup.GET("/penilaian/:final_id", guruhandlers.GetPenilaianHandler)
-		guruGroup.POST("/penilaian", guruhandlers.CreatePenilaianHandler)
-		guruGroup.PATCH("/penilaian/:penilaian_id", guruhandlers.UpdatePenilaianHandler)
-		guruGroup.DELETE("/penilaian/:penilaian_id", guruhandlers.DeletePenilaianHandler)
+		// guruGroup.GET("/penilaian/:final_id", guruhandlers.GetPenilaianHandler)
+		// guruGroup.POST("/penilaian", guruhandlers.CreatePenilaianHandler)
+		// guruGroup.PATCH("/penilaian/:penilaian_id", guruhandlers.UpdatePenilaianHandler)
+		// guruGroup.DELETE("/penilaian/:penilaian_id", guruhandlers.DeletePenilaianHandler)
 
 		// routes
 

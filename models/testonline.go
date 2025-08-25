@@ -13,7 +13,9 @@ type TO_Test struct {
 	TestID      uint      `json:"test_id" gorm:"column:test_id;primaryKey;autoIncrement"`
 	GuruID      uint      `json:"guru_id" gorm:"column:guru_id"`
 	KelasID     uint      `json:"kelas_id" gorm:"column:kelas_id"`
-	Mapel       string    `json:"mapel" gorm:"column:mapel"`
+	MapelID     uint64    `json:"mapel_id"`
+	Jumlah      uint      `json:"jumlah_soal_tampil" gorm:"column:jumlah_soal_tampil"`
+	TypeTest    string    `json:"type_test"` // "ub" atau "quis"
 	Judul       string    `json:"judul" gorm:"column:judul"`
 	Deskripsi   string    `json:"deskripsi" gorm:"column:deskripsi"`
 	DurasiMenit int       `json:"durasi_menit" gorm:"column:durasi_menit"`
@@ -21,7 +23,7 @@ type TO_Test struct {
 	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
 
 	// Relasi
-
+	Mapel Mapel `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
 	Guru  Guru  `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
 	Kelas Kelas `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
 }

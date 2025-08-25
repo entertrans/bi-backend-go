@@ -69,14 +69,18 @@ func RestoreBankSoalHandler(c *gin.Context) {
 		return
 	}
 
-	err = gurucontrollers.RestoreBankSoal(uint(soalID))
+	soal, err := gurucontrollers.RestoreBankSoal(uint(soalID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengembalikan bank soal"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Bank soal berhasil direstore"})
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    soal,
+	})
 }
+
 func BuatSoalHandler(c *gin.Context) {
 	body, _ := io.ReadAll(c.Request.Body)
 	log.Println("RAW BODY:", string(body))
