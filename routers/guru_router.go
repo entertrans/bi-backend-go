@@ -46,6 +46,13 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		testquis.PUT("/peserta/:peserta_id", guruhandlers.UpdatePesertaHandler)      // update peserta
 		testquis.DELETE("/peserta/:peserta_id", guruhandlers.DeletePesertaHandler)   // hapus peserta
 	}
+	testSoalGroup := r.Group("/test-soal")
+	{
+		testSoalGroup.GET("/by-test/:test_id", guruhandlers.GetTestSoalByTestIdHandler)
+		testSoalGroup.GET("/detail/:soal_id", guruhandlers.GetDetailTestSoalHandler)
+		testSoalGroup.POST("/create", guruhandlers.CreateTestSoalHandler)
+		testSoalGroup.DELETE("/delete/:soal_id", guruhandlers.DeleteTestSoalHandler)
+	}
 
 	lampiran := r.Group("/lampiran")
 	{

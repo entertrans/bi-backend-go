@@ -90,3 +90,113 @@ func GetAvailableSiswaByKelasHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, siswa)
 }
+
+func GetTestSoalByTestIdHandler(c *gin.Context) {
+	testIdStr := c.Param("test_id")
+	testId, err := strconv.ParseUint(testIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Test ID tidak valid",
+		})
+		return
+	}
+
+	soals, err := gurucontrollers.GetTestSoalByTestId(uint(testId))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal mengambil data soal: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    soals,
+		"message": "Data soal berhasil diambil",
+	})
+}
+
+// GetDetailTestSoalHandler - Get detail soal by ID
+func GetDetailTestSoalHandler(c *gin.Context) {
+	soalIdStr := c.Param("soal_id")
+	soalId, err := strconv.ParseUint(soalIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Soal ID tidak valid",
+		})
+		return
+	}
+
+	soal, err := gurucontrollers.GetDetailTestSoal(uint(soalId))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal mengambil detail soal: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    soal,
+		"message": "Detail soal berhasil diambil",
+	})
+}
+
+// DeleteTestSoalHandler - Delete soal (soft delete)
+func DeleteTestSoalHandler(c *gin.Context) {
+	soalIdStr := c.Param("soal_id")
+	soalId, err := strconv.ParseUint(soalIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Soal ID tidak valid",
+		})
+		return
+	}
+
+	err = gurucontrollers.DeleteTestSoal(uint(soalId))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal menghapus soal: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Soal berhasil dihapus",
+	})
+}
+
+// CreateTestSoalHandler - Create new test soal
+func CreateTestSoalHandler(c *gin.Context) {
+	var input gurucontrollers.TestSoalInput
+	
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Input tidak valid: " + err.Error(),
+		})
+		return
+	}
+
+	soal, err := gurucontrollers.CreateTestSoal(input)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal membuat soal: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    soal,
+		"message": "Soal berhasil dibuat",
+	})
+}

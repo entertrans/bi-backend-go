@@ -19,6 +19,8 @@ type TO_Test struct {
 	Judul       string    `json:"judul" gorm:"column:judul"`
 	Deskripsi   string    `json:"deskripsi" gorm:"column:deskripsi"`
 	DurasiMenit int       `json:"durasi_menit" gorm:"column:durasi_menit"`
+	Deadline    string       `json:"deadline" gorm:"column:deadline"`
+	Aktif       uint       `json:"aktif" gorm:"column:aktif"`
 	RandomSoal  bool      `json:"random_soal" gorm:"column:random_soal"`
 	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
 
@@ -54,8 +56,6 @@ type TO_Peserta struct {
 func (TO_Peserta) TableName() string {
 	return "to_peserta"
 }
-
-
 
 // =========================
 // 2. TO_TestSession
@@ -183,4 +183,26 @@ type TO_Lampiran struct {
 
 func (TO_Lampiran) TableName() string {
 	return "TO_Lampiran"
+}
+
+type TO_TestSoal struct {
+	TestsoalID     uint           `json:"testsoal_id" gorm:"column:testsoal_id;primaryKey;autoIncrement"`
+	TestID         uint           `json:"test_id" gorm:"column:test_id;not null"`
+	TipeSoal       string         `json:"tipe_soal" gorm:"column:tipe_soal;type:enum('pg','pg_kompleks','matching','isian_singkat','uraian');not null"`
+	Pertanyaan     string         `json:"pertanyaan" gorm:"column:pertanyaan;type:text;not null"`
+	LampiranID     *uint          `json:"lampiran_id" gorm:"column:lampiran_id"`
+	PilihanJawaban string         `json:"pilihan_jawaban" gorm:"column:pilihan_jawaban;type:json"`
+	JawabanBenar   string         `json:"jawaban_benar" gorm:"column:jawaban_benar;type:json;not null"`
+	Bobot          float64        `json:"bobot" gorm:"column:bobot;type:decimal(5,2);default:1.00"`
+	CreatedAt      time.Time      `json:"created_at" gorm:"column:created_at;default:CURRENT_TIMESTAMP"`
+	DeletedAt      gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"column:deleted_at;index"`
+
+	// Relasi
+	Test     TO_Test      `json:"test" gorm:"foreignKey:TestID;references:TestID"`
+	Lampiran *TO_Lampiran `json:"lampiran" gorm:"foreignKey:LampiranID;references:LampiranID"`
+}
+
+// TableName specifies the table name
+func (TO_TestSoal) TableName() string {
+	return "to_testsoal"
 }
