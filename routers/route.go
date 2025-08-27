@@ -3,6 +3,7 @@ package routers
 import (
 	"time"
 
+	"github.com/entertrans/bi-backend-go/handlers"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -24,6 +25,9 @@ func SetupRouter() *gin.Engine {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
+
+	r.POST("/login", handlers.LoginHandler)
+	r.GET("/pengguna/aktif", handlers.GetActivePenggunaHandler)
 
 	// 🔗 Panggil semua router modular
 	RegisterSiswaRoutes(r)
