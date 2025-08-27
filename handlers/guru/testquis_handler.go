@@ -176,7 +176,7 @@ func DeleteTestSoalHandler(c *gin.Context) {
 // CreateTestSoalHandler - Create new test soal
 func CreateTestSoalHandler(c *gin.Context) {
 	var input gurucontrollers.TestSoalInput
-	
+
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
