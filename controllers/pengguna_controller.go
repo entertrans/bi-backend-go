@@ -20,24 +20,30 @@ func GetActivePengguna() ([]models.Pengguna, error) {
 // GetPenggunaByUsername -> dengan eager loading conditional
 func GetPenggunaByUsername(username string) (*models.Pengguna, error) {
 	var pengguna models.Pengguna
-	
-	// First get basic user data
-	err := config.DB.Where("pengguna_username = ?", username).First(&pengguna).Error
-	if err != nil {
+
+	// Ambil user dulu
+	if err := config.DB.Where("pengguna_username = ?", username).First(&pengguna).Error; err != nil {
 		return nil, err
 	}
-	
-	// Load relations based on user level
+
+	// bikin db query base
+	db := config.DB.Model(&pengguna)
+
+	// preload sesuai level
 	switch pengguna.PenggunaLevel {
 	case "1": // ADMIN
-		err = config.DB.Preload("Admin").First(&pengguna, pengguna.PenggunaID).Error
+		db = db.Preload("Admin")
 	case "2": // SISWA
-		err = config.DB.Preload("Siswa").First(&pengguna, pengguna.PenggunaID).Error
+		db = db.Preload("Siswa").
+			Preload("Siswa.Kelas")
 	case "3": // GURU
-		err = config.DB.Preload("Guru").First(&pengguna, pengguna.PenggunaID).Error
-	default:
-		// No relation to load
+		db = db.Preload("Guru")
 	}
-	
-	return &pengguna, err
+
+	// reload user + relasinya
+	if err := db.First(&pengguna, pengguna.PenggunaID).Error; err != nil {
+		return nil, err
+	}
+
+	return &pengguna, nil
 }
