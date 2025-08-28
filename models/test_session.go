@@ -18,6 +18,7 @@ type TestSession struct {
 	NilaiAkhir float64    `gorm:"type:decimal(5,2);default:0.00;column:nilai_akhir"`
 	UpdatedAt  time.Time  `gorm:"autoUpdateTime;column:updated_at"`
 
+	Test     TO_Test      `json:"test" gorm:"foreignKey:TestID;references:TestID"`
 	JawabanFinal []JawabanFinal `gorm:"foreignKey:SessionID"`
 }
 

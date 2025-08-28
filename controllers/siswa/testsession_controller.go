@@ -9,7 +9,7 @@ import (
 	"github.com/entertrans/bi-backend-go/models"
 )
 
-// Mulai test baru (insert session)
+// Mulai test baru atau lanjutkan session yang ada - DIPERBAIKI
 func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 	// Convert nis string to int
 	nisInt, err := strconv.Atoi(nis)
@@ -17,15 +17,101 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 		return nil, err
 	}
 
+	// Cek apakah sudah ada session yang aktif untuk test ini
+	var existingSession models.TestSession
+	err = config.DB.
+		Preload("Test").
+		Where("test_id = ? AND siswa_nis = ? AND status = 'in_progress'", testID, nisInt).
+		First(&existingSession).Error
+
+	// Jika sudah ada session aktif, hitung waktu sisa dan return session
+	if err == nil {
+		// Hitung waktu sisa
+		elapsedTime := time.Since(existingSession.StartTime)
+		totalDuration := time.Duration(existingSession.Test.DurasiMenit) * time.Minute
+		remainingTime := totalDuration - elapsedTime
+
+		// Jika waktu sudah habis, update status menjadi submitted
+		if remainingTime <= 0 {
+			endTime := existingSession.StartTime.Add(totalDuration)
+			existingSession.Status = "submitted"
+			existingSession.EndTime = &endTime
+			existingSession.WaktuSisa = 0
+			config.DB.Save(&existingSession)
+			return nil, fmt.Errorf("waktu ujian sudah habis")
+		}
+
+		// Update waktu sisa di database
+		existingSession.WaktuSisa = int(remainingTime.Seconds())
+		config.DB.Save(&existingSession)
+
+		return &existingSession, nil
+	}
+
+	// Jika tidak ada session aktif, buat session baru
+	var test models.TO_Test
+	if err := config.DB.First(&test, testID).Error; err != nil {
+		return nil, err
+	}
+
+	startTime := time.Now()
+	endTime := startTime.Add(time.Duration(test.DurasiMenit) * time.Minute)
+
 	session := models.TestSession{
-		TestID:    testID,
-		SiswaNIS:  nisInt, // sekarang int
-		StartTime: time.Now(),
-		Status:    "in_progress",
+		TestID:     testID,
+		SiswaNIS:   nisInt,
+		StartTime:  startTime,
+		EndTime:    &endTime,
+		WaktuSisa:  test.DurasiMenit * 60,
+		Status:     "in_progress",
+		NilaiAwal:  0,
+		NilaiAkhir: 0,
 	}
 
 	err = config.DB.Create(&session).Error
-	return &session, err
+	if err != nil {
+		return nil, err
+	}
+
+	return &session, nil
+}
+
+// Get session aktif - DIPERBAIKI
+func GetActiveTestSession(testID uint, nis string) (*models.TestSession, error) {
+	nisInt, err := strconv.Atoi(nis)
+	if err != nil {
+		return nil, err
+	}
+
+	var session models.TestSession
+	err = config.DB.
+		Preload("Test").
+		Where("test_id = ? AND siswa_nis = ? AND status = 'in_progress'", testID, nisInt).
+		First(&session).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Hitung waktu sisa real-time
+	elapsedTime := time.Since(session.StartTime)
+	totalDuration := time.Duration(session.Test.DurasiMenit) * time.Minute
+	remainingTime := totalDuration - elapsedTime
+
+	// Jika waktu habis, update status
+	if remainingTime <= 0 {
+		endTime := session.StartTime.Add(totalDuration)
+		session.Status = "submitted"
+		session.EndTime = &endTime
+		session.WaktuSisa = 0
+		config.DB.Save(&session)
+		return nil, fmt.Errorf("waktu ujian sudah habis")
+	}
+
+	// Update waktu sisa untuk response (tanpa menyimpan ke database)
+	session.WaktuSisa = int(remainingTime.Seconds())
+
+	return &session, nil
 }
 
 // Ambil sesi siswa untuk 1 test
