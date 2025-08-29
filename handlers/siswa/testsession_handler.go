@@ -35,7 +35,7 @@ func StartTestHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, session)
 }
 
-//check sessi
+// check sessi
 func GetActiveTestSessionHandler(c *gin.Context) {
 	testID, err := strconv.Atoi(c.Param("test_id"))
 	if err != nil {
@@ -51,10 +51,12 @@ func GetActiveTestSessionHandler(c *gin.Context) {
 
 	session, err := siswaControllers.GetActiveTestSession(uint(testID), nis)
 	if err != nil {
+		// Kalau error dari DB
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada session aktif"})
 		return
 	}
 
+	// ✅ Return session, meski statusnya sudah "submitted"
 	c.JSON(http.StatusOK, session)
 }
 
@@ -113,7 +115,7 @@ func GetSessionByIDHandler(c *gin.Context) {
 	var session models.TestSession
 	err = config.DB.
 		Preload("JawabanFinal").
-		Preload("Test").    
+		Preload("Test").
 		Preload("JawabanFinal.Soal").
 		Where("session_id = ?", sessionID). // Explicit WHERE clause
 		First(&session).Error

@@ -86,30 +86,31 @@ func GetActiveTestSession(testID uint, nis string) (*models.TestSession, error) 
 	var session models.TestSession
 	err = config.DB.
 		Preload("Test").
-		Where("test_id = ? AND siswa_nis = ? AND status = 'in_progress'", testID, nisInt).
+		Where("test_id = ? AND siswa_nis = ?", testID, nisInt).
+		Order("updated_at DESC").
 		First(&session).Error
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Hitung waktu sisa real-time
-	elapsedTime := time.Since(session.StartTime)
-	totalDuration := time.Duration(session.Test.DurasiMenit) * time.Minute
-	remainingTime := totalDuration - elapsedTime
+	// Kalau masih in_progress → hitung sisa waktu
+	if session.Status == "in_progress" {
+		elapsedTime := time.Since(session.StartTime)
+		totalDuration := time.Duration(session.Test.DurasiMenit) * time.Minute
+		remainingTime := totalDuration - elapsedTime
 
-	// Jika waktu habis, update status
-	if remainingTime <= 0 {
-		endTime := session.StartTime.Add(totalDuration)
-		session.Status = "submitted"
-		session.EndTime = &endTime
-		session.WaktuSisa = 0
-		config.DB.Save(&session)
-		return nil, fmt.Errorf("waktu ujian sudah habis")
+		if remainingTime <= 0 {
+			endTime := session.StartTime.Add(totalDuration)
+			session.Status = "submitted"
+			session.EndTime = &endTime
+			session.WaktuSisa = 0
+			config.DB.Save(&session)
+		} else {
+			// update field sementara untuk response
+			session.WaktuSisa = int(remainingTime.Seconds())
+		}
 	}
-
-	// Update waktu sisa untuk response (tanpa menyimpan ke database)
-	session.WaktuSisa = int(remainingTime.Seconds())
 
 	return &session, nil
 }

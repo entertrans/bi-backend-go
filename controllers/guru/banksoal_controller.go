@@ -161,10 +161,28 @@ func SimpanSoal(input BankSoalInput) error {
 		}
 
 	case "bs":
-		// jawaban_benar: [string]
+		// pilihan_jawaban: array pernyataan { "teks": string, "jawaban": "benar"/"salah" }
+		var pj []map[string]interface{}
+		if err := json.Unmarshal([]byte(input.PilihanJawaban), &pj); err != nil {
+			return errors.New("pilihan_jawaban untuk Benar/Salah harus array object")
+		}
+
+		// Contoh: jawaban_benar = ["benar", "salah", "benar"]
 		var jb []string
 		if err := json.Unmarshal([]byte(input.JawabanBenar), &jb); err != nil {
-			return errors.New("jawaban_benar untuk BS harus array string")
+			return errors.New("jawaban_benar untuk Benar/Salah harus array string")
+		}
+
+		// validasi panjang array sama
+		if len(jb) != len(pj) {
+			return errors.New("jumlah jawaban_benar tidak sesuai dengan jumlah pernyataan")
+		}
+
+		// validasi isi benar/salah
+		for _, j := range jb {
+			if j != "benar" && j != "salah" {
+				return errors.New("jawaban_benar hanya boleh 'benar' atau 'salah'")
+			}
 		}
 
 	case "uraian", "isian_singkat":
@@ -236,54 +254,86 @@ type RekapSoal struct {
 func GetRekapBankSoal() ([]RekapSoal, error) {
 	var results []RekapSoal
 
-	// Ambil semua soal aktif
-	var soals []models.TO_BankSoal
+	// 1. Ambil semua kelas-mapel
+	var kelasMapels []models.KelasMapel
 	err := config.DB.
 		Preload("Kelas").
 		Preload("Mapel").
+		Order("kelas_id ASC, kd_mapel ASC").
+		Find(&kelasMapels).Error
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Ambil semua soal aktif
+	var soals []models.TO_BankSoal
+	err = config.DB.
 		Where("deleted_at IS NULL").
 		Find(&soals).Error
 	if err != nil {
 		return nil, err
 	}
 
-	// Peta buat grouping
-	rekapMap := make(map[string]*RekapSoal)
+	// 3. Peta count soal
+	countMap := make(map[string]*RekapSoal)
 
 	for _, soal := range soals {
 		key := fmt.Sprintf("%d-%d", soal.KelasID, soal.MapelID)
 
-		if _, ok := rekapMap[key]; !ok {
-			rekapMap[key] = &RekapSoal{
-				KelasID:   soal.KelasID,
-				KelasNama: soal.Kelas.KelasNama,
-				MapelID:   soal.MapelID,
-				MapelNama: soal.Mapel.NmMapel, // ambil nama mapel dari relasi
+		if _, ok := countMap[key]; !ok {
+			countMap[key] = &RekapSoal{
+				KelasID:     soal.KelasID,
+				MapelID:     soal.MapelID,
+				PG:          0,
+				PGKompleks:  0,
+				Isian:       0,
+				TrueFalse:   0,
+				Uraian:      0,
+				Mencocokkan: 0,
+				Total:       0,
 			}
-
 		}
 
 		switch soal.TipeSoal {
 		case "pg":
-			rekapMap[key].PG++
+			countMap[key].PG++
 		case "pg_kompleks":
-			rekapMap[key].PGKompleks++
+			countMap[key].PGKompleks++
 		case "isian_singkat":
-			rekapMap[key].Isian++
-		case "true_false":
-			rekapMap[key].TrueFalse++
+			countMap[key].Isian++
+		case "bs":
+			countMap[key].TrueFalse++
 		case "uraian":
-			rekapMap[key].Uraian++
+			countMap[key].Uraian++
 		case "matching":
-			rekapMap[key].Mencocokkan++
+			countMap[key].Mencocokkan++
 		}
 
-		rekapMap[key].Total++
+		countMap[key].Total++
 	}
 
-	// Ubah map ke slice
-	for _, v := range rekapMap {
-		results = append(results, *v)
+	// 4. Loop semua kelas-mapel, gabung dengan countMap
+	for _, km := range kelasMapels {
+		key := fmt.Sprintf("%d-%d", km.KelasID, km.KdMapel)
+
+		rekap := RekapSoal{
+			KelasID:   km.KelasID,
+			KelasNama: km.Kelas.KelasNama,
+			MapelID:   km.KdMapel,
+			MapelNama: km.Mapel.NmMapel,
+		}
+
+		if val, ok := countMap[key]; ok {
+			rekap.PG = val.PG
+			rekap.PGKompleks = val.PGKompleks
+			rekap.Isian = val.Isian
+			rekap.TrueFalse = val.TrueFalse
+			rekap.Uraian = val.Uraian
+			rekap.Mencocokkan = val.Mencocokkan
+			rekap.Total = val.Total
+		}
+
+		results = append(results, rekap)
 	}
 
 	return results, nil

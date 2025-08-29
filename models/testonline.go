@@ -19,8 +19,8 @@ type TO_Test struct {
 	Judul       string    `json:"judul" gorm:"column:judul"`
 	Deskripsi   string    `json:"deskripsi" gorm:"column:deskripsi"`
 	DurasiMenit int       `json:"durasi_menit" gorm:"column:durasi_menit"`
-	Deadline    string       `json:"deadline" gorm:"column:deadline"`
-	Aktif       uint       `json:"aktif" gorm:"column:aktif"`
+	Deadline    *string   `json:"deadline" gorm:"column:deadline"`
+	Aktif       uint      `json:"aktif" gorm:"column:aktif"`
 	RandomSoal  bool      `json:"random_soal" gorm:"column:random_soal"`
 	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
 
