@@ -115,6 +115,7 @@ func GetSessionByIDHandler(c *gin.Context) {
 	var session models.TestSession
 	err = config.DB.
 		Preload("JawabanFinal").
+		
 		Preload("Test").
 		Preload("JawabanFinal.Soal").
 		Where("session_id = ?", sessionID). // Explicit WHERE clause

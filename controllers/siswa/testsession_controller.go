@@ -17,38 +17,44 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 		return nil, err
 	}
 
-	// Cek apakah sudah ada session yang aktif untuk test ini
+	// Cari session terakhir untuk test + siswa ini (submitted atau in_progress)
 	var existingSession models.TestSession
 	err = config.DB.
 		Preload("Test").
-		Where("test_id = ? AND siswa_nis = ? AND status = 'in_progress'", testID, nisInt).
+		Where("test_id = ? AND siswa_nis = ?", testID, nisInt).
+		Order("start_time DESC").
 		First(&existingSession).Error
 
-	// Jika sudah ada session aktif, hitung waktu sisa dan return session
 	if err == nil {
-		// Hitung waktu sisa
-		elapsedTime := time.Since(existingSession.StartTime)
-		totalDuration := time.Duration(existingSession.Test.DurasiMenit) * time.Minute
-		remainingTime := totalDuration - elapsedTime
-
-		// Jika waktu sudah habis, update status menjadi submitted
-		if remainingTime <= 0 {
-			endTime := existingSession.StartTime.Add(totalDuration)
-			existingSession.Status = "submitted"
-			existingSession.EndTime = &endTime
-			existingSession.WaktuSisa = 0
-			config.DB.Save(&existingSession)
+		// 🚨 Kalau sudah submitted, jangan bikin baru
+		if existingSession.Status == "submitted" {
 			return nil, fmt.Errorf("waktu ujian sudah habis")
 		}
 
-		// Update waktu sisa di database
-		existingSession.WaktuSisa = int(remainingTime.Seconds())
-		config.DB.Save(&existingSession)
+		// Kalau masih in_progress → cek waktu
+		if existingSession.Status == "in_progress" {
+			elapsedTime := time.Since(existingSession.StartTime)
+			totalDuration := time.Duration(existingSession.Test.DurasiMenit) * time.Minute
+			remainingTime := totalDuration - elapsedTime
 
-		return &existingSession, nil
+			if remainingTime <= 0 {
+				endTime := existingSession.StartTime.Add(totalDuration)
+				existingSession.Status = "submitted"
+				existingSession.EndTime = &endTime
+				existingSession.WaktuSisa = 0
+				config.DB.Save(&existingSession)
+				return nil, fmt.Errorf("waktu ujian sudah habis")
+			}
+
+			// Update waktu sisa
+			existingSession.WaktuSisa = int(remainingTime.Seconds())
+			config.DB.Save(&existingSession)
+
+			return &existingSession, nil
+		}
 	}
 
-	// Jika tidak ada session aktif, buat session baru
+	// Kalau belum ada session sama sekali → buat baru
 	var test models.TO_Test
 	if err := config.DB.First(&test, testID).Error; err != nil {
 		return nil, err
@@ -75,6 +81,7 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 
 	return &session, nil
 }
+
 
 // Get session aktif - DIPERBAIKI
 func GetActiveTestSession(testID uint, nis string) (*models.TestSession, error) {
@@ -161,9 +168,14 @@ func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {
 			query = query.Limit(int(test.Jumlah))
 		}
 
-		if err := query.Find(&soal).Error; err != nil {
-			return nil, err
-		}
+		if err := query.Preload("Guru").
+    Preload("Kelas").
+    Preload("Mapel").
+    Preload("Lampiran").
+    Find(&soal).Error; err != nil {
+    return nil, err
+}
+
 
 	} else if test.TypeTest == "quis" {
 		// QUIZ: ambil dari tabel to_testsoal
