@@ -38,13 +38,14 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		// routes
 
 	}
-	testquis := r.Group("/testquis")
+	//test review
+	testReview := r.Group("/testreview")
 	{
 		// test
-		testquis.POST("/peserta", guruhandlers.AddPesertaHandler)                    // tambah 1 peserta
-		testquis.GET("/peserta/test/:test_id", guruhandlers.GetPesertaByTestHandler) // ambil semua peserta by test
-		testquis.PUT("/peserta/:peserta_id", guruhandlers.UpdatePesertaHandler)      // update peserta
-		testquis.DELETE("/peserta/:peserta_id", guruhandlers.DeletePesertaHandler)   // hapus peserta
+		testReview.POST("/peserta", guruhandlers.AddPesertaHandler)                    // tambah 1 peserta
+		testReview.GET("/peserta/test/:test_id", guruhandlers.GetPesertaByTestHandler) // ambil semua peserta by test
+		testReview.PUT("/peserta/:peserta_id", guruhandlers.UpdatePesertaHandler)      // update peserta
+		testReview.DELETE("/peserta/:peserta_id", guruhandlers.DeletePesertaHandler)   // hapus peserta
 	}
 	testSoalGroup := r.Group("/test-soal")
 	{

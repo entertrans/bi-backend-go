@@ -10,19 +10,19 @@ import (
 // 1. TO_Test
 // =========================
 type TO_Test struct {
-	TestID      uint      `json:"test_id" gorm:"column:test_id;primaryKey;autoIncrement"`
-	GuruID      uint      `json:"guru_id" gorm:"column:guru_id"`
-	KelasID     uint      `json:"kelas_id" gorm:"column:kelas_id"`
-	MapelID     uint64    `json:"mapel_id"`
-	Jumlah      uint      `json:"jumlah_soal_tampil" gorm:"column:jumlah_soal_tampil"`
-	TypeTest    string    `json:"type_test"` // "ub" atau "quis"
-	Judul       string    `json:"judul" gorm:"column:judul"`
-	Deskripsi   string    `json:"deskripsi" gorm:"column:deskripsi"`
-	DurasiMenit int       `json:"durasi_menit" gorm:"column:durasi_menit"`
-	Deadline    *string   `json:"deadline" gorm:"column:deadline"`
-	Aktif       uint      `json:"aktif" gorm:"column:aktif"`
-	RandomSoal  bool      `json:"random_soal" gorm:"column:random_soal"`
-	CreatedAt   time.Time `json:"created_at" gorm:"column:created_at"`
+	TestID      uint       `json:"test_id" gorm:"column:test_id;primaryKey;autoIncrement"`
+	GuruID      uint       `json:"guru_id" gorm:"column:guru_id"`
+	KelasID     uint       `json:"kelas_id" gorm:"column:kelas_id"`
+	MapelID     uint64     `json:"mapel_id"`
+	Jumlah      uint       `json:"jumlah_soal_tampil" gorm:"column:jumlah_soal_tampil"`
+	TypeTest    string     `json:"type_test"` // "ub" atau "tr / tugas"
+	Judul       string     `json:"judul" gorm:"column:judul"`
+	Deskripsi   string     `json:"deskripsi" gorm:"column:deskripsi"`
+	DurasiMenit int        `json:"durasi_menit" gorm:"column:durasi_menit"`
+	Deadline    *time.Time `json:"deadline" gorm:"column:deadline"`
+	Aktif       *uint      `json:"aktif" gorm:"column:aktif"`
+	RandomSoal  bool       `json:"random_soal" gorm:"column:random_soal"`
+	CreatedAt   time.Time  `json:"created_at" gorm:"column:created_at"`
 
 	// Relasi
 	Mapel Mapel `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
@@ -63,7 +63,7 @@ func (TO_Peserta) TableName() string {
 type TO_TestSession struct {
 	SessionID  uint       `json:"session_id" gorm:"column:session_id;primaryKey;autoIncrement"`
 	TestID     uint       `json:"test_id" gorm:"column:test_id"`
-	SiswaNIS   uint       `json:"siswa_nis" gorm:"column:siswa_nis"`
+	SiswaNIS   string     `json:"siswa_nis" gorm:"column:siswa_nis"`
 	StartTime  time.Time  `json:"start_time" gorm:"column:start_time"`
 	EndTime    *time.Time `json:"end_time" gorm:"column:end_time"`
 	WaktuSisa  int        `json:"waktu_sisa" gorm:"column:waktu_sisa"`
@@ -73,8 +73,8 @@ type TO_TestSession struct {
 	UpdatedAt  time.Time  `json:"updated_at" gorm:"column:updated_at"`
 
 	// Relasi
-	Test  TO_Test `json:"test" gorm:"foreignKey:TestID;references:TestID"`
-	Siswa Siswa   `json:"siswa" gorm:"foreignKey:SiswaNIS;references:SiswaID"`
+	Test  *TO_Test `json:"test" gorm:"foreignKey:TestID;references:TestID"`
+	Siswa Siswa    `json:"siswa" gorm:"foreignKey:SiswaNIS;references:SiswaID"`
 }
 
 func (TO_TestSession) TableName() string {

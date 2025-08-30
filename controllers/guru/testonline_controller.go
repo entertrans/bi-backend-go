@@ -10,7 +10,7 @@ func CreateTest(test *models.TO_Test) error {
 	return config.DB.Create(test).Error
 }
 
-// Get test by type (ub / quis)
+// Get test by type (ub / tr/ tugas)
 func GetTestByType(tipe string) ([]models.TO_Test, error) {
 	var tests []models.TO_Test
 	err := config.DB.

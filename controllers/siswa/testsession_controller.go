@@ -82,12 +82,11 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 	return &session, nil
 }
 
-
 // Get session aktif - DIPERBAIKI
 func GetActiveTestSession(testID uint, nis string) (*models.TestSession, error) {
 	nisInt, err := strconv.Atoi(nis)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("NIS tidak valid: %w", err)
 	}
 
 	var session models.TestSession
@@ -98,23 +97,32 @@ func GetActiveTestSession(testID uint, nis string) (*models.TestSession, error) 
 		First(&session).Error
 
 	if err != nil {
-		return nil, err
+		return nil, err // Return error asli untuk dibedakan di handler
 	}
 
-	// Kalau masih in_progress → hitung sisa waktu
+	// ✅ CEK JIKA Test TIDAK NULL
+	if session.Test == nil {
+		return nil, fmt.Errorf("data test tidak ditemukan untuk session")
+	}
+
+	// ✅ HANYA PROSES JIKA MASIH IN_PROGRESS
 	if session.Status == "in_progress" {
 		elapsedTime := time.Since(session.StartTime)
 		totalDuration := time.Duration(session.Test.DurasiMenit) * time.Minute
 		remainingTime := totalDuration - elapsedTime
 
 		if remainingTime <= 0 {
+			// Waktu habis, auto-submit
 			endTime := session.StartTime.Add(totalDuration)
 			session.Status = "submitted"
 			session.EndTime = &endTime
 			session.WaktuSisa = 0
-			config.DB.Save(&session)
+
+			if err := config.DB.Save(&session).Error; err != nil {
+				return nil, fmt.Errorf("gagal menyimpan session: %w", err)
+			}
 		} else {
-			// update field sementara untuk response
+			// Update field sementara untuk response (tidak disimpan ke DB)
 			session.WaktuSisa = int(remainingTime.Seconds())
 		}
 	}
@@ -169,15 +177,14 @@ func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {
 		}
 
 		if err := query.Preload("Guru").
-    Preload("Kelas").
-    Preload("Mapel").
-    Preload("Lampiran").
-    Find(&soal).Error; err != nil {
-    return nil, err
-}
+			Preload("Kelas").
+			Preload("Mapel").
+			Preload("Lampiran").
+			Find(&soal).Error; err != nil {
+			return nil, err
+		}
 
-
-	} else if test.TypeTest == "quis" {
+	} else if test.TypeTest == "tr" {
 		// QUIZ: ambil dari tabel to_testsoal
 		var testSoal []models.TO_TestSoal
 		if err := config.DB.Where("test_id = ?", test.TestID).Find(&testSoal).Error; err != nil {

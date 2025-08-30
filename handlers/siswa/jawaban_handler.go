@@ -3,27 +3,28 @@ package siswa
 import (
 	"net/http"
 
-	siswaControllers "github.com/entertrans/bi-backend-go/controllers/siswa"
+	"github.com/entertrans/bi-backend-go/config"
+	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm/clause"
 )
 
 // POST /siswa/jawaban/save
 func SaveJawabanHandler(c *gin.Context) {
-	var req struct {
-		SessionID    uint    `json:"session_id"`
-		SoalID       uint    `json:"soal_id"`
-		JawabanSiswa string  `json:"jawaban_siswa"`
-		SkorObjektif float64 `json:"skor_objektif"`
-	}
-
+	var req models.TO_JawabanFinal
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Input tidak valid"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err := siswaControllers.SaveJawabanFinal(req.SessionID, req.SoalID, req.JawabanSiswa, req.SkorObjektif)
+	// Upsert jawaban (biar kalau sudah ada diupdate aja)
+	err := config.DB.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "session_id"}, {Name: "soal_id"}},
+		UpdateAll: true,
+	}).Create(&req).Error
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal simpan jawaban"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

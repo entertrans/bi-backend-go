@@ -16,11 +16,16 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		siswaRoutes.GET("/test/:test_id/session", siswaHandler.GetTestSessionHandler)
 		siswaRoutes.POST("/test/submit/:session_id", siswaHandler.SubmitTestHandler)
 		siswaRoutes.GET("/test/session/:session_id", siswaHandler.GetSessionByIDHandler)
-		
-		siswaRoutes.GET("/tests/ub", siswaHandler.GetAllUBTestHandler)
-		siswaRoutes.GET("/tests/ub/kelas/:kelas_id", siswaHandler.GetUBTestByKelasHandler) // Tambahkan ini
+
+		// siswaRoutes.GET("/tests/ub", siswaHandler.GetAllUBTestHandler)
+		// siswaRoutes.GET("/tests/ub/kelas/:kelas_id", siswaHandler.GetUBTestByKelasHandler) // Tambahkan ini
+		siswaRoutes.GET("/tests/by-type/:type_test/kelas/:kelas_id", siswaHandler.GetTestByKelasHandler)
 		siswaRoutes.GET("/tests/:id/soal", siswaHandler.GetSoalByTestIDHandler)
+
 		siswaRoutes.POST("/jawaban/save", siswaHandler.SaveJawabanHandler)
 		siswaRoutes.GET("/test/:test_id/soal", siswaHandler.GetSoalHandler)
+
+		//test review
+
 	}
 }

@@ -1,15 +1,19 @@
 package siswa
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/entertrans/bi-backend-go/config"
 	siswaControllers "github.com/entertrans/bi-backend-go/controllers/siswa"
 	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // POST /siswa/test/start/:test_id
@@ -50,18 +54,33 @@ func GetActiveTestSessionHandler(c *gin.Context) {
 	}
 
 	session, err := siswaControllers.GetActiveTestSession(uint(testID), nis)
+
+	// ✅ PENANGANAN ERROR YANG LEBIH BAIK
 	if err != nil {
-		// Kalau error dari DB
-		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada session aktif"})
+		// Gunakan errors.Is untuk mengecek jenis error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "Tidak ada session aktif ditemukan",
+				"details": "Siswa belum memulai test atau session sudah disubmit",
+			})
+		} else if strings.Contains(err.Error(), "NIS tidak valid") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Format NIS tidak valid"})
+		} else if strings.Contains(err.Error(), "data test tidak ditemukan") {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Data test tidak lengkap"})
+		} else {
+			// Log error untuk debugging
+			log.Printf("Internal Server Error in GetActiveTestSession: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Terjadi kesalahan internal server",
+			})
+		}
 		return
 	}
 
-	// ✅ Return session, meski statusnya sudah "submitted"
 	c.JSON(http.StatusOK, session)
 }
 
 // GET /siswa/test/:test_id/session
-// GET /siswa/test/:test_id/session - DIPERBAIKI
 func GetTestSessionHandler(c *gin.Context) {
 	testID, _ := strconv.Atoi(c.Param("test_id"))
 	nis := c.Query("nis")
@@ -115,7 +134,6 @@ func GetSessionByIDHandler(c *gin.Context) {
 	var session models.TestSession
 	err = config.DB.
 		Preload("JawabanFinal").
-		
 		Preload("Test").
 		Preload("JawabanFinal.Soal").
 		Where("session_id = ?", sessionID). // Explicit WHERE clause
