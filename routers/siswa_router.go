@@ -16,6 +16,7 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		siswaRoutes.GET("/test/:test_id/active-session", siswaHandler.GetActiveTestSessionHandler)
 		siswaRoutes.GET("/test/:test_id/session", siswaHandler.GetTestSessionHandler)
 		siswaRoutes.POST("/test/submit/:session_id", siswaHandler.SubmitTestHandler)
+		siswaRoutes.POST("/tugas/submit/:session_id", siswaHandler.SubmitTugasHandler)
 		siswaRoutes.GET("/test/session/:session_id", siswaHandler.GetSessionByIDHandler)
 
 		siswaRoutes.GET("/tests/by-type/:type_test/kelas/:kelas_id", siswaHandler.GetTestByKelasHandler)

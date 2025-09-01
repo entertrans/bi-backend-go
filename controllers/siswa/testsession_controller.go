@@ -292,6 +292,12 @@ func SubmitTestSession(sessionID uint) error {
 		}).Error
 }
 
+func SubmitTugasSession(sessionID uint) error {
+	return config.DB.Model(&models.TestSession{}).
+		Where("session_id = ?", sessionID).
+		Update("status", "onqueue").Error
+}
+
 // GET /siswa/test/:test_id/soal
 func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {
 	// Ambil data test
