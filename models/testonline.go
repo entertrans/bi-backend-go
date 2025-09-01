@@ -63,7 +63,7 @@ func (TO_Peserta) TableName() string {
 type TO_TestSession struct {
 	SessionID  uint       `json:"session_id" gorm:"column:session_id;primaryKey;autoIncrement"`
 	TestID     uint       `json:"test_id" gorm:"column:test_id"`
-	SiswaNIS   string     `json:"siswa_nis" gorm:"column:siswa_nis"`
+	SiswaNIS   uint       `json:"siswa_nis" gorm:"column:siswa_nis"`
 	StartTime  time.Time  `json:"start_time" gorm:"column:start_time"`
 	EndTime    *time.Time `json:"end_time" gorm:"column:end_time"`
 	WaktuSisa  int        `json:"waktu_sisa" gorm:"column:waktu_sisa"`
@@ -140,10 +140,11 @@ type TO_BankSoal struct {
 	DeletedAt      gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relasi
-	Guru     Guru         `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
-	Kelas    Kelas        `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
-	Mapel    Mapel        `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
-	Lampiran *TO_Lampiran `json:"lampiran" gorm:"foreignKey:LampiranID;references:LampiranID"`
+	JawabanTersimpan interface{}  `gorm:"-" json:"jawaban_tersimpan,omitempty"` // Field virtual
+	Guru             Guru         `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
+	Kelas            Kelas        `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
+	Mapel            Mapel        `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
+	Lampiran         *TO_Lampiran `json:"lampiran" gorm:"foreignKey:LampiranID;references:LampiranID"`
 }
 
 func (TO_BankSoal) TableName() string {

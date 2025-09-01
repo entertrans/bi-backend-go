@@ -12,13 +12,12 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 	siswaRoutes := r.Group("/siswa")
 	{
 		siswaRoutes.POST("/test/start/:test_id", siswaHandler.StartTestHandler)
+		siswaRoutes.GET("/session/:session_id/soal", siswaHandler.GetSessionSoalHandler)
 		siswaRoutes.GET("/test/:test_id/active-session", siswaHandler.GetActiveTestSessionHandler)
 		siswaRoutes.GET("/test/:test_id/session", siswaHandler.GetTestSessionHandler)
 		siswaRoutes.POST("/test/submit/:session_id", siswaHandler.SubmitTestHandler)
 		siswaRoutes.GET("/test/session/:session_id", siswaHandler.GetSessionByIDHandler)
 
-		// siswaRoutes.GET("/tests/ub", siswaHandler.GetAllUBTestHandler)
-		// siswaRoutes.GET("/tests/ub/kelas/:kelas_id", siswaHandler.GetUBTestByKelasHandler) // Tambahkan ini
 		siswaRoutes.GET("/tests/by-type/:type_test/kelas/:kelas_id", siswaHandler.GetTestByKelasHandler)
 		siswaRoutes.GET("/tests/:id/soal", siswaHandler.GetSoalByTestIDHandler)
 

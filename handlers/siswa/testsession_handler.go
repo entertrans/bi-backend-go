@@ -150,11 +150,66 @@ func GetSessionByIDHandler(c *gin.Context) {
 }
 
 func GetSoalHandler(c *gin.Context) {
-	testID, _ := strconv.Atoi(c.Param("test_id"))
+	testID, err := strconv.Atoi(c.Param("test_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Test ID tidak valid"})
+		return
+	}
+
+	// 1. CEK APAKAH ADA SESSION AKTIF UNTUK TEST INI
+	// (Tidak perlu NIS, karena bisa ada multiple sessions untuk test yang sama)
+	var activeSessions []models.TestSession
+	err = config.DB.
+		Where("test_id = ? AND status = 'in_progress'", testID).
+		Order("start_time DESC").
+		Find(&activeSessions).Error
+
+	// 2. JIKA ADA SESSION AKTIF → AMBIL SOAL DARI to_sessionsoal (ambil session terbaru)
+	if err == nil && len(activeSessions) > 0 {
+		latestSession := activeSessions[0] // Ambil session terbaru
+		log.Printf("🟢 Session aktif ditemukan: ID=%d untuk testID=%d", latestSession.SessionID, testID)
+
+		soal, err := siswaControllers.GetSoalBySessionID(latestSession.SessionID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"session_id": latestSession.SessionID,
+			"soal":       soal,
+			"source":     "session_soal",
+		})
+		return
+	}
+
+	// 3. JIKA TIDAK ADA SESSION AKTIF → AMBIL SOAL BARU
+	log.Printf("🟡 Tidak ada session aktif, ambil soal baru untuk testID: %d", testID)
 
 	soal, err := siswaControllers.GetSoalByTestID1(uint(testID))
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"session_id": nil,
+		"soal":       soal,
+		"source":     "new_soal",
+	})
+}
+
+// GET /siswa/session/:session_id/soal
+func GetSessionSoalHandler(c *gin.Context) {
+	sessionID, err := strconv.Atoi(c.Param("session_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Session ID tidak valid"})
+		return
+	}
+
+	soal, err := siswaControllers.GetSoalBySessionID(uint(sessionID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
