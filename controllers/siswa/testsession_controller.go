@@ -124,6 +124,7 @@ type SoalDTO struct {
 	LampiranID       *uint       `json:"lampiran_id"`
 	PilihanJawaban   string      `json:"pilihan_jawaban"`
 	JawabanBenar     string      `json:"jawaban_benar"`
+	status     string      `json:"status"`
 	Bobot            float64     `json:"bobot"`
 	JawabanTersimpan interface{} `json:"jawaban_tersimpan,omitempty"`
 }
