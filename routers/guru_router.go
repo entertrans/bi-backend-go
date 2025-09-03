@@ -64,4 +64,13 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		lampiran.PUT("/restore/:lampiran_id", guruhandlers.RestoreLampiranHandler)
 		lampiran.DELETE("/hard/:lampiran_id", guruhandlers.HardDeleteLampiranHandler)
 	}
+
+	SiswaJawab := r.Group("/guru")
+	{
+		SiswaJawab.GET("/jawaban/siswa/:siswa_nis", guruhandlers.GetJawabanBySiswaHandler)
+		SiswaJawab.GET("/jawaban/session/:session_id", guruhandlers.GetDetailJawabanHandler)
+		SiswaJawab.GET("/test/:test_id/siswa", guruhandlers.GetSiswaByTestHandler)
+		SiswaJawab.GET("/test/:test_id/statistics", guruhandlers.GetTestStatisticsHandler)
+		SiswaJawab.GET("/jawaban/siswa/:siswa_nis/detail", guruhandlers.GetSiswaDetailForGuruHandler)
+	}
 }

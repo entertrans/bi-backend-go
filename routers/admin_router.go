@@ -43,6 +43,13 @@ func RegisterAdminRoutes(r *gin.Engine) {
 		lookup.GET("/kelas/:kelas_id", adminHandlers.GetSiswaByKelasHandler)
 	}
 
+	export := r.Group("/api/matapelajaran")
+	{
+		export.GET("/questions", adminHandlers.GetAllJSONQuestions)
+		// export.GET("/kelas/:kelasId/questions", adminHandlers.GetJSONQuestionsByKelasID)
+		// export.GET("/:id/questions", adminHandlers.GetJSONQuestionsByID)
+	}
+
 	// ✅ tagihan
 	tagihan := r.Group("/tagihan")
 	{

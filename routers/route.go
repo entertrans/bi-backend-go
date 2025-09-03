@@ -29,6 +29,8 @@ func SetupRouter() *gin.Engine {
 	r.POST("/login", handlers.LoginHandler)
 	r.GET("/pengguna/aktif", handlers.GetActivePenggunaHandler)
 
+
+
 	// 🔗 Panggil semua router modular
 	RegisterSiswaRoutes(r)
 	RegisterAdminRoutes(r)
