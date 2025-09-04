@@ -27,7 +27,7 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		guruGroup.GET("/test/type/:type_test", guruhandlers.GetTestByType)
 		guruGroup.GET("/test/guru/:guru_id", guruhandlers.GetTestsByGuruHandler)
 		guruGroup.GET("/test/:test_id", guruhandlers.GetTestHandler)
-		guruGroup.PUT("/test/:test_id", guruhandlers.UpdateTestHandler)
+		guruGroup.PUT("/test/:test_id", guruhandlers.UpdateTestAktifHandler)
 		guruGroup.DELETE("/test/:test_id", guruhandlers.DeleteTestHandler)
 		// Routes penilaian
 		// guruGroup.GET("/penilaian/:final_id", guruhandlers.GetPenilaianHandler)

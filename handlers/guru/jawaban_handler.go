@@ -88,11 +88,11 @@ func GetTestStatisticsHandler(c *gin.Context) {
 }
 
 func GetSiswaDetailForGuruHandler(c *gin.Context) {
-    siswaNIS := c.Param("siswa_nis")
-    siswaDetail, err := gurucontrollers.GetSiswaDetailForGuru(siswaNIS)
-    if err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-        return
-    }
-    c.JSON(http.StatusOK, gin.H{"data": siswaDetail}) // Wrap dalam { data: }
+	siswaNIS := c.Param("siswa_nis")
+	siswaDetail, err := gurucontrollers.GetSiswaDetailForGuru(siswaNIS)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"data": siswaDetail}) // Wrap dalam { data: }
 }

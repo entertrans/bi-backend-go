@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/entertrans/bi-backend-go/config"
 	gurucontrollers "github.com/entertrans/bi-backend-go/controllers/guru"
 	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
@@ -61,21 +62,26 @@ func GetTestHandler(c *gin.Context) {
 }
 
 // Update test
-func UpdateTestHandler(c *gin.Context) {
+func UpdateTestAktifHandler(c *gin.Context) {
 	idStr := c.Param("test_id")
 	id, _ := strconv.Atoi(idStr)
 
-	var data map[string]interface{}
-	if err := c.ShouldBindJSON(&data); err != nil {
+	var payload struct {
+		Aktif int `json:"aktif"`
+	}
+	if err := c.ShouldBindJSON(&payload); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := gurucontrollers.UpdateTest(uint(id), data); err != nil {
+	if err := config.DB.Model(&models.TO_Test{}).
+		Where("test_id = ?", id).
+		Update("aktif", payload.Aktif).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Test updated"})
+
+	c.JSON(http.StatusOK, gin.H{"message": "Status aktif updated"})
 }
 
 // Delete test
