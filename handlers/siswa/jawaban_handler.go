@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// POST /siswa/jawaban/save
 func SaveJawabanHandler(c *gin.Context) {
 	var req struct {
 		SessionID    uint    `json:"session_id"`
 		SoalID       uint    `json:"soal_id"`
 		JawabanSiswa string  `json:"jawaban_siswa"`
 		SkorObjektif float64 `json:"skor_objektif"`
+		TipeSoal     string  `json:"tipe_soal"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -21,7 +21,13 @@ func SaveJawabanHandler(c *gin.Context) {
 		return
 	}
 
-	err := siswaControllers.SaveJawabanFinal(req.SessionID, req.SoalID, req.JawabanSiswa, req.SkorObjektif)
+	err := siswaControllers.SaveJawabanFinal(
+		req.SessionID,
+		req.SoalID,
+		req.JawabanSiswa,
+		req.SkorObjektif,
+		req.TipeSoal,
+	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal simpan jawaban"})
 		return

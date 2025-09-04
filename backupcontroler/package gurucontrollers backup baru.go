@@ -2,12 +2,10 @@ package gurucontrollers
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/entertrans/bi-backend-go/config"
 	"github.com/entertrans/bi-backend-go/models"
-	"gorm.io/gorm"
 )
 
 type TestJawabanResult struct {
@@ -36,155 +34,73 @@ func GetJawabanBySiswaNIS(siswaNIS string) ([]TestJawabanResult, error) {
 		return nil, fmt.Errorf("siswa tidak ditemukan")
 	}
 
-	if siswa.SiswaKelasID == nil || siswa.Kelas.KelasId == 0 {
-		return nil, fmt.Errorf("siswa belum memiliki kelas atau data kelas tidak valid")
+	// Pastikan SiswaKelasID valid (bukan pointer nil)
+	// Alternatif: cek apakah Kelas memiliki data yang valid
+if siswa.SiswaKelasID == nil || siswa.Kelas.KelasId == 0 {
+    return nil, fmt.Errorf("siswa belum memiliki kelas atau data kelas tidak valid")
+}
+
+	// 2. Ambil semua test di kelas siswa
+	var tests []models.TO_Test
+	if err := db.Where("kelas_id = ?", *siswa.SiswaKelasID).
+		Preload("Mapel").
+		Find(&tests).Error; err != nil {
+		return nil, err
 	}
 
 	results := []TestJawabanResult{}
 
-	// ---------------------------
-	// 2A. Ambil test UB by kelas
-	// ---------------------------
-	var testsUB []models.TO_Test
-	if err := db.Where("kelas_id = ? AND type_test = ?", *siswa.SiswaKelasID, "ub").
-		Preload("Mapel").
-		Find(&testsUB).Error; err != nil {
-		return nil, err
-	}
+	for _, test := range tests {
+		var session models.TO_TestSession
+		err := db.Where("test_id = ? AND siswa_nis = ?", test.TestID, siswaNIS).
+			First(&session).Error
 
-	for _, test := range testsUB {
-		res, err := buildTestResult(db, test, siswaNIS)
-		if err == nil {
-			results = append(results, res)
+		// Hitung rangkaian soal per tipe
+		rangkaian := map[string]int{}
+		var testSoal []models.TO_TestSoal
+		db.Where("test_id = ?", test.TestID).Find(&testSoal)
+		for _, ts := range testSoal {
+			rangkaian[ts.TipeSoal]++
 		}
-	}
 
-	// ---------------------------
-	// 2B. Ambil test TR/Tugas by peserta
-	// ---------------------------
-	var pesertaList []models.TO_Peserta
-	if err := db.Where("siswa_nis = ?", siswaNIS).
-		Preload("Test.Mapel").
-		Find(&pesertaList).Error; err != nil {
-		return nil, err
-	}
-
-	for _, peserta := range pesertaList {
-		res, err := buildTestResult(db, peserta.Test, siswaNIS)
-		if err == nil {
-			results = append(results, res)
+		// Build result
+		res := TestJawabanResult{
+			TestID:    test.TestID,
+			Jenis:     test.TypeTest,
+			Mapel:     test.Mapel.NmMapel,
+			Judul:     test.Judul,
+			Rangkaian: rangkaian,
 		}
+
+		if err != nil {
+			// ❌ belum ada session
+			res.Status = "❌ belum dikerjakan"
+		} else {
+			// ✅ Ada session
+			res.Nilai = &session.NilaiAkhir
+			res.Tanggal = &session.StartTime
+
+			// Hitung soal subjektif yang belum dinilai
+			var countBelum int64
+			db.Model(&models.TO_JawabanFinal{}).
+				Joins("JOIN to_testsoal ON to_jawabanfinal.soal_id = to_testsoal.soal_id").
+				Where("to_jawabanfinal.session_id = ? AND to_testsoal.tipe_soal IN (?)", 
+					session.SessionID, []string{"uraian", "isian_singkat"}).
+				Where("to_jawabanfinal.skor_uraian IS NULL").
+				Count(&countBelum)
+
+			if countBelum > 0 {
+				res.Status = fmt.Sprintf("⚠️ %d belum dinilai", countBelum)
+			} else {
+				res.Status = "✅ semua dinilai"
+			}
+		}
+
+		results = append(results, res)
 	}
 
 	return results, nil
 }
-
-// Helper untuk bangun hasil per test
-func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJawabanResult, error) {
-	var session models.TO_TestSession
-	err := db.Where("test_id = ? AND siswa_nis = ?", test.TestID, siswaNIS).
-		First(&session).Error
-
-	// ===============================
-	// Hitung rangkaian soal per tipe
-	// ===============================
-	rangkaian := map[string]int{}
-	var butuhReview bool
-
-	// 1. coba ambil dari to_testsoal (untuk tugas / tr)
-	var tipeList []string
-	db.Model(&models.TO_TestSoal{}).
-		Where("test_id = ?", test.TestID).
-		Pluck("tipe_soal", &tipeList)
-
-	// 2. kalau kosong → ambil dari to_sessionsoal join banksoal (untuk ub)
-	if len(tipeList) == 0 {
-		db.Table("to_sessionsoal").
-			Select("to_banksoal.tipe_soal").
-			Joins("JOIN to_banksoal ON to_sessionsoal.soal_id = to_banksoal.soal_id").
-			Where("to_sessionsoal.session_id = ?", session.SessionID).
-			Pluck("to_banksoal.tipe_soal", &tipeList)
-	}
-
-	for _, tipe := range tipeList {
-		rangkaian[tipe]++
-		if tipe == "uraian" || tipe == "isian_singkat" {
-			butuhReview = true
-		}
-	}
-
-	// ===============================
-	// Build hasil
-	// ===============================
-	res := TestJawabanResult{
-		TestID:      test.TestID,
-		Jenis:       test.TypeTest,
-		Mapel:       test.Mapel.NmMapel,
-		Judul:       test.Judul,
-		Rangkaian:   rangkaian,
-		ButuhReview: butuhReview,
-		Reviewed:    false,
-		Submited:    false,
-	}
-
-	// ❌ belum ada session → belum dikerjakan
-	if err != nil {
-		res.Status = "❌ belum dikerjakan"
-		return res, nil
-	}
-
-	// ✅ Ada session
-	res.Nilai = &session.NilaiAkhir
-	res.Tanggal = &session.StartTime
-
-	// cek apakah sudah ada jawaban final
-	var countJawaban int64
-	db.Table("to_jawabanfinal").
-		Where("session_id = ?", session.SessionID).
-		Count(&countJawaban)
-	if countJawaban > 0 {
-		res.Submited = true
-	}
-
-	if butuhReview {
-		// hitung soal subjektif di jawabanfinal
-		var totalSubjektif, countBelum int64
-		db.Table("to_jawabanfinal").
-			Joins("JOIN to_banksoal ON to_jawabanfinal.soal_id = to_banksoal.soal_id").
-			Where("to_jawabanfinal.session_id = ? AND to_banksoal.tipe_soal IN (?)",
-				session.SessionID, []string{"uraian", "isian_singkat"}).
-			Count(&totalSubjektif)
-
-		db.Table("to_jawabanfinal").
-			Joins("JOIN to_banksoal ON to_jawabanfinal.soal_id = to_banksoal.soal_id").
-			Where("to_jawabanfinal.session_id = ? AND to_banksoal.tipe_soal IN (?)",
-				session.SessionID, []string{"uraian", "isian_singkat"}).
-			Where("to_jawabanfinal.skor_uraian IS NULL").
-			Count(&countBelum)
-
-		if totalSubjektif > 0 {
-			if countBelum > 0 {
-				res.Status = "⏳ menunggu review"
-				res.Reviewed = false
-			} else {
-				res.Status = "✅ sudah direview"
-				res.Reviewed = true
-			}
-		}
-	} else {
-		if res.Submited {
-			res.Status = "✅ otomatis dinilai"
-			res.Reviewed = true
-		}
-	}
-
-	log.Printf("[DEBUG] test_id=%d siswa_nis=%s rangkaian=%v status=%s",
-		res.TestID, siswaNIS, res.Rangkaian, res.Status)
-
-	return res, nil
-}
-
-
 
 // Fungsi tambahan untuk mendapatkan detail jawaban siswa
 func GetDetailJawabanBySession(sessionID uint) (map[string]interface{}, error) {
