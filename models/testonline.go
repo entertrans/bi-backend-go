@@ -3,12 +3,10 @@ package models
 import (
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
-// =========================
-// 1. TO_Test
-// =========================
 type TO_Test struct {
 	TestID      uint       `json:"test_id" gorm:"column:test_id;primaryKey;autoIncrement"`
 	GuruID      uint       `json:"guru_id" gorm:"column:guru_id"`
@@ -34,16 +32,12 @@ func (TO_Test) TableName() string {
 	return "TO_Test"
 }
 
-// =========================
-// TO_Peserta
-// =========================
 type TO_Peserta struct {
 	PesertaID  uint      `json:"peserta_id" gorm:"column:peserta_id;primaryKey;autoIncrement"`
 	TestID     uint      `json:"test_id" gorm:"column:test_id"`
 	SiswaNIS   string    `json:"siswa_nis" gorm:"column:siswa_nis"`
 	Status     string    `json:"status" gorm:"column:status;default:not_started"`
 	ExtraTime  int       `json:"extra_time" gorm:"column:extra_time"`
-	NilaiAwal  float64   `json:"nilai_awal" gorm:"column:nilai_awal"`
 	NilaiAkhir float64   `json:"nilai_akhir" gorm:"column:nilai_akhir"`
 	CreatedAt  time.Time `json:"created_at" gorm:"column:created_at"`
 	UpdatedAt  time.Time `json:"updated_at" gorm:"column:updated_at"`
@@ -57,73 +51,23 @@ func (TO_Peserta) TableName() string {
 	return "to_peserta"
 }
 
-// =========================
-// 2. TO_TestSession
-// =========================
-type TO_TestSession struct {
-	SessionID  uint       `json:"session_id" gorm:"column:session_id;primaryKey;autoIncrement"`
-	TestID     uint       `json:"test_id" gorm:"column:test_id"`
-	SiswaNIS   uint       `json:"siswa_nis" gorm:"column:siswa_nis"`
-	StartTime  time.Time  `json:"start_time" gorm:"column:start_time"`
-	EndTime    *time.Time `json:"end_time" gorm:"column:end_time"`
-	WaktuSisa  int        `json:"waktu_sisa" gorm:"column:waktu_sisa"`
-	Status     string     `json:"status" gorm:"column:status"`
-	NilaiAwal  float64    `json:"nilai_awal" gorm:"column:nilai_awal"`
-	NilaiAkhir float64    `json:"nilai_akhir" gorm:"column:nilai_akhir"`
-	UpdatedAt  time.Time  `json:"updated_at" gorm:"column:updated_at"`
-
-	// Relasi
-	Test  *TO_Test `json:"test" gorm:"foreignKey:TestID;references:TestID"`
-	Siswa Siswa    `json:"siswa" gorm:"foreignKey:SiswaNIS;references:SiswaID"`
-}
-
-func (TO_TestSession) TableName() string {
-	return "TO_TestSession"
-}
-
-// =========================
-// 3. TO_JawabanDraft
-// =========================
-type TO_JawabanDraft struct {
-	DraftID      uint      `json:"draft_id" gorm:"column:draft_id;primaryKey;autoIncrement"`
-	SessionID    uint      `json:"session_id" gorm:"column:session_id"`
-	SoalID       uint      `json:"soal_id" gorm:"column:soal_id"`
-	JawabanSiswa string    `json:"jawaban_siswa" gorm:"column:jawaban_siswa;type:json"`
-	UpdatedAt    time.Time `json:"updated_at" gorm:"column:updated_at"`
-
-	// Relasi
-	Session TO_TestSession `json:"session" gorm:"foreignKey:SessionID;references:SessionID"`
-	Soal    TO_BankSoal    `json:"soal" gorm:"foreignKey:SoalID;references:SoalID"`
-}
-
-func (TO_JawabanDraft) TableName() string {
-	return "TO_JawabanDraft"
-}
-
-// =========================
-// 4. TO_JawabanFinal
-// =========================
 type TO_JawabanFinal struct {
-	FinalID      uint      `json:"final_id" gorm:"column:final_id;primaryKey;autoIncrement"`
-	SessionID    uint      `json:"session_id" gorm:"column:session_id"`
-	SoalID       uint      `json:"soal_id" gorm:"column:soal_id"`
-	JawabanSiswa string    `json:"jawaban_siswa" gorm:"column:jawaban_siswa;type:json"`
-	SkorObjektif float64   `json:"skor_objektif" gorm:"column:skor_objektif"`
-	SkorUraian   *float64  `json:"skor_uraian" gorm:"column:skor_uraian"`
-	UpdatedAt    time.Time `json:"updated_at" gorm:"column:updated_at"`
+	FinalID      uint           `gorm:"primaryKey;column:final_id"`
+	SessionID    uint           `gorm:"not null;index;column:session_id"`
+	SoalID       uint           `gorm:"not null;column:soal_id"`
+	JawabanSiswa datatypes.JSON `gorm:"type:json;column:jawaban_siswa"`
+	SkorObjektif float64        `gorm:"type:decimal(5,2);default:0.00;column:skor_objektif"`
+	SkorUraian   *float64       `gorm:"type:decimal(5,2);column:skor_uraian"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime;column:updated_at"`
 
-	// Relasi
-	Session TO_TestSession `json:"session" gorm:"foreignKey:SessionID;references:SessionID"`
-	Soal    TO_BankSoal    `json:"soal" gorm:"foreignKey:SoalID;references:SoalID"`
+	Session TestSession `gorm:"foreignKey:SessionID;references:SessionID;constraint:OnDelete:CASCADE;"`
+	Soal    TO_BankSoal `gorm:"foreignKey:SoalID;references:SoalID;constraint:OnDelete:CASCADE;"`
 }
 
 func (TO_JawabanFinal) TableName() string {
 	return "TO_JawabanFinal"
 }
 
-// =========================
-// 5. TO_BankSoal
-// =========================
 type TO_BankSoal struct {
 	SoalID uint `json:"soal_id" gorm:"column:soal_id;primaryKey;autoIncrement"`
 	// SoalUID        string         `json:"soal_uid" gorm:"column:soal_uid;unique"`
@@ -148,30 +92,9 @@ type TO_BankSoal struct {
 }
 
 func (TO_BankSoal) TableName() string {
-	return "TO_BankSoal"
+	return "to_banksoal"
 }
 
-// =========================
-// 6. TO_PenilaianGuru
-// =========================
-type TO_PenilaianGuru struct {
-	PenilaianID uint      `json:"penilaian_id" gorm:"column:penilaian_id;primaryKey;autoIncrement"`
-	FinalID     uint      `json:"final_id" gorm:"column:final_id"`
-	Skor        float64   `json:"skor" gorm:"column:skor"`
-	Komentar    string    `json:"komentar" gorm:"column:komentar"`
-	UpdatedAt   time.Time `json:"updated_at" gorm:"column:updated_at"`
-
-	// Relasi
-	JawabanFinal TO_JawabanFinal `json:"jawaban_final" gorm:"foreignKey:FinalID;references:FinalID"`
-}
-
-func (TO_PenilaianGuru) TableName() string {
-	return "TO_PenilaianGuru"
-}
-
-// =========================
-// 7. TO_Lampiran (gallery bersama, soft delete)
-// =========================
 type TO_Lampiran struct {
 	LampiranID uint           `json:"lampiran_id" gorm:"column:lampiran_id;primaryKey;autoIncrement"`
 	NamaFile   string         `json:"nama_file" gorm:"column:nama_file"`

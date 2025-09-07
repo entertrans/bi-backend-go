@@ -18,6 +18,7 @@ type TestSession struct {
 	NilaiAkhir float64    `gorm:"type:decimal(5,2);default:0.00;column:nilai_akhir"`
 	UpdatedAt  time.Time  `gorm:"autoUpdateTime;column:updated_at"`
 
+	Siswa        Siswa            `json:"siswa" gorm:"foreignKey:SiswaNIS;references:SiswaID"`
 	Test         *TO_Test         `json:"test" gorm:"foreignKey:TestID;references:TestID"`
 	JawabanFinal []JawabanFinal   `gorm:"foreignKey:SessionID"`
 	SessionSoal  []TO_SessionSoal `gorm:"foreignKey:SessionID;references:SessionID"`
@@ -55,3 +56,24 @@ type TO_SessionSoal struct {
 func (TO_SessionSoal) TableName() string {
 	return "to_sessionsoal"
 }
+
+// type TO_TestSession struct {
+// 	SessionID  uint       `json:"session_id" gorm:"column:session_id;primaryKey;autoIncrement"`
+// 	TestID     uint       `json:"test_id" gorm:"column:test_id"`
+// 	SiswaNIS   uint       `json:"siswa_nis" gorm:"column:siswa_nis"`
+// 	StartTime  time.Time  `json:"start_time" gorm:"column:start_time"`
+// 	EndTime    *time.Time `json:"end_time" gorm:"column:end_time"`
+// 	WaktuSisa  int        `json:"waktu_sisa" gorm:"column:waktu_sisa"`
+// 	Status     string     `json:"status" gorm:"column:status"`
+// 	NilaiAwal  float64    `json:"nilai_awal" gorm:"column:nilai_awal"`
+// 	NilaiAkhir float64    `json:"nilai_akhir" gorm:"column:nilai_akhir"`
+// 	UpdatedAt  time.Time  `json:"updated_at" gorm:"column:updated_at"`
+
+// 	// Relasi
+// 	Test  *TO_Test `json:"test" gorm:"foreignKey:TestID;references:TestID"`
+// 	Siswa Siswa    `json:"siswa" gorm:"foreignKey:SiswaNIS;references:SiswaID"`
+// }
+
+//	func (TO_TestSession) TableName() string {
+//		return "TO_TestSession"
+//	}

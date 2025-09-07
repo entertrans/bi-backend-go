@@ -150,55 +150,54 @@ func GetSessionByIDHandler(c *gin.Context) {
 }
 
 func GetSoalHandler(c *gin.Context) {
-    testID, err := strconv.Atoi(c.Param("test_id"))
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Test ID tidak valid"})
-        return
-    }
+	testID, err := strconv.Atoi(c.Param("test_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Test ID tidak valid"})
+		return
+	}
 
-    // 1. CEK APAKAH ADA SESSION AKTIF UNTUK TEST INI
-    var activeSessions []models.TestSession
-    err = config.DB.
-        Where("test_id = ? AND status IN ?", testID, []string{"in_progress", "onqueue"}).
-        Order("start_time DESC").
-        Find(&activeSessions).Error
+	// 1. CEK APAKAH ADA SESSION AKTIF UNTUK TEST INI
+	var activeSessions []models.TestSession
+	err = config.DB.
+		Where("test_id = ? AND status IN ?", testID, []string{"in_progress", "onqueue"}).
+		Order("start_time DESC").
+		Find(&activeSessions).Error
 
-    // 2. JIKA ADA SESSION AKTIF → AMBIL SOAL DARI to_sessionsoal (ambil session terbaru)
-    if err == nil && len(activeSessions) > 0 {
-        latestSession := activeSessions[0] // Ambil session terbaru
-        log.Printf("🟢 Session aktif ditemukan: ID=%d untuk testID=%d, status=%s", latestSession.SessionID, testID, latestSession.Status)
+	// 2. JIKA ADA SESSION AKTIF → AMBIL SOAL DARI to_sessionsoal (ambil session terbaru)
+	if err == nil && len(activeSessions) > 0 {
+		latestSession := activeSessions[0] // Ambil session terbaru
+		log.Printf("🟢 Session aktif ditemukan: ID=%d untuk testID=%d, status=%s", latestSession.SessionID, testID, latestSession.Status)
 
-        soal, err := siswaControllers.GetSoalBySessionID(latestSession.SessionID)
-        if err != nil {
-            c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-            return
-        }
+		soal, err := siswaControllers.GetSoalBySessionID(latestSession.SessionID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 
-        c.JSON(http.StatusOK, gin.H{
-            "session_id": latestSession.SessionID,
-            "soal":       soal,
-            "status":     latestSession.Status,
-            "source":     "session_soal",
-        })
-        return
-    }
+		c.JSON(http.StatusOK, gin.H{
+			"session_id": latestSession.SessionID,
+			"soal":       soal,
+			"status":     latestSession.Status,
+			"source":     "session_soal",
+		})
+		return
+	}
 
-    // 3. JIKA TIDAK ADA SESSION AKTIF → AMBIL SOAL BARU
-    log.Printf("🟡 Tidak ada session aktif, ambil soal baru untuk testID: %d", testID)
+	// 3. JIKA TIDAK ADA SESSION AKTIF → AMBIL SOAL BARU
+	log.Printf("🟡 Tidak ada session aktif, ambil soal baru untuk testID: %d", testID)
 
-    soal, err := siswaControllers.GetSoalByTestID1(uint(testID))
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-        return
-    }
+	soal, err := siswaControllers.GetSoalByTestID1(uint(testID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{
-        "session_id": nil,
-        "soal":       soal,
-        "source":     "new_soal",
-    })
+	c.JSON(http.StatusOK, gin.H{
+		"session_id": nil,
+		"soal":       soal,
+		"source":     "new_soal",
+	})
 }
-
 
 // GET /siswa/session/:session_id/soal
 func GetSessionSoalHandler(c *gin.Context) {
@@ -240,7 +239,7 @@ func SubmitTugasHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":     "Tugas berhasil dikumpulkan (onqueue)",
+		"message":      "Tugas berhasil dikumpulkan (onqueue)",
 		"submitted_at": time.Now(),
 	})
 }

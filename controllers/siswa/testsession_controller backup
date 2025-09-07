@@ -118,16 +118,15 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 
 // bikin DTO umum biar frontend nggak ribet
 type SoalDTO struct {
-	SoalID           uint                `json:"soal_id"`
-	TipeSoal         string              `json:"tipe_soal"`
-	Pertanyaan       string              `json:"pertanyaan"`
-	LampiranID       *uint               `json:"lampiran_id"`
-	Lampiran         *models.TO_Lampiran `json:"lampiran,omitempty"` // ✅ ubah ke TO_Lampiran
-	PilihanJawaban   string              `json:"pilihan_jawaban"`
-	JawabanBenar     string              `json:"jawaban_benar"`
-	Status           string              `json:"status"`
-	Bobot            float64             `json:"bobot"`
-	JawabanTersimpan interface{}         `json:"jawaban_tersimpan,omitempty"`
+	SoalID           uint        `json:"soal_id"`
+	TipeSoal         string      `json:"tipe_soal"`
+	Pertanyaan       string      `json:"pertanyaan"`
+	LampiranID       *uint       `json:"lampiran_id"`
+	PilihanJawaban   string      `json:"pilihan_jawaban"`
+	JawabanBenar     string      `json:"jawaban_benar"`
+	status           string      `json:"status"`
+	Bobot            float64     `json:"bobot"`
+	JawabanTersimpan interface{} `json:"jawaban_tersimpan,omitempty"`
 }
 
 // GetSoalBySessionID harus return []SoalDTO
@@ -183,20 +182,15 @@ func GetSoalBySessionID(sessionID uint) ([]SoalDTO, error) {
 
 		for _, s := range soals {
 			soalDTOs = append(soalDTOs, SoalDTO{
-				SoalID:     s.SoalID,
-				TipeSoal:   s.TipeSoal,
-				Pertanyaan: s.Pertanyaan,
-				LampiranID: s.LampiranID,
-
-				// 👇 tambahan ini
-				Lampiran: s.Lampiran,
-
+				SoalID:           s.SoalID,
+				TipeSoal:         s.TipeSoal,
+				Pertanyaan:       s.Pertanyaan,
+				LampiranID:       s.LampiranID,
 				PilihanJawaban:   s.PilihanJawaban,
 				JawabanBenar:     s.JawabanBenar,
 				Bobot:            s.Bobot,
-				JawabanTersimpan: jawabanMap[s.SoalID],
+				JawabanTersimpan: jawabanMap[s.SoalID], // <<<< diset di sini
 			})
-
 		}
 
 	} else {
@@ -317,7 +311,7 @@ func SubmitTestSession(sessionID uint) error {
 
 	var jawabanDetails []JawabanDetail
 	err := tx.Table("to_jawabanfinal jf").
-		Select("jf.final_id, jf.soal_id, bs.tipe_soal, bs.bobot, jf.skor_objektif").
+		Select("jf.final_id, jf.soal_id, bs.tipe_soal, bs.bobot, jf.skor_objektif, jf.skor_uraian").
 		Joins("JOIN to_banksoal bs ON jf.soal_id = bs.soal_id").
 		Where("jf.session_id = ?", sessionID).
 		Scan(&jawabanDetails).Error
@@ -354,7 +348,7 @@ func SubmitTestSession(sessionID uint) error {
 				butuhReview = true
 				keterangan = "Uraian/Isian: Belum dinilai (0)"
 			} else {
-				// Untuk uraian/isian, skor SUDAH termasuk bobot
+				// Untuk uraian/isian, skor_uraian SUDAH termasuk bobot
 				skorSoal = *jd.SkorUraian
 				keterangan = fmt.Sprintf("Uraian/Isian: %.2f (sudah termasuk bobot)", *jd.SkorUraian)
 			}
@@ -385,10 +379,19 @@ func SubmitTestSession(sessionID uint) error {
 		log.Printf("Perhitungan: Total maksimal 0, nilai akhir 0")
 	}
 
+	// 4. Tentukan status berdasarkan apakah butuh review
+	status := "submitted"
+	if butuhReview {
+		status = "onqueue"
+		log.Printf("Status: onqueue (butuh review manual)")
+	} else {
+		log.Printf("Status: submitted (semua soal sudah dinilai)")
+	}
+
 	// 5. Update session
 	updateData := map[string]interface{}{
 		"end_time":    time.Now(),
-		"status":      "submitted",
+		"status":      status,
 		"nilai_akhir": nilaiAkhir,
 		"updated_at":  time.Now(),
 	}
@@ -400,9 +403,9 @@ func SubmitTestSession(sessionID uint) error {
 		return fmt.Errorf("gagal update session: %v", err)
 	}
 
-	// log.Printf("=== UPDATE SESSION BERHASIL ===")
-	// log.Printf("Nilai Akhir: %.2f", nilaiAkhir)
-	// log.Printf("Status: %s", status)
+	log.Printf("=== UPDATE SESSION BERHASIL ===")
+	log.Printf("Nilai Akhir: %.2f", nilaiAkhir)
+	log.Printf("Status: %s", status)
 
 	// 6. Commit transaction
 	return tx.Commit().Error

@@ -1,6 +1,7 @@
 package gurucontrollers
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -10,7 +11,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// Rangkaian map[string]int `json:"rangkaian"`
 type TestJawabanResult struct {
 	TestID      uint           `json:"test_id"`
 	Jenis       string         `json:"jenis"`
@@ -23,6 +23,7 @@ type TestJawabanResult struct {
 	Submited    bool           `json:"submited"`     // sudah submit jawaban?
 	ButuhReview bool           `json:"butuh_review"` // ada esai/isian singkat?
 	Reviewed    bool           `json:"reviewed"`     // sudah direview guru?
+	SessionID   *uint          `json:"session_id"`
 }
 
 // GetJawabanBySiswaNIS ambil semua hasil test berdasarkan NIS siswa
@@ -82,27 +83,41 @@ func GetJawabanBySiswaNIS(siswaNIS string) ([]TestJawabanResult, error) {
 
 // Helper untuk bangun hasil per test
 func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJawabanResult, error) {
-	var session models.TO_TestSession
+	var session models.TestSession
 	err := db.Where("test_id = ? AND siswa_nis = ?", test.TestID, siswaNIS).
 		First(&session).Error
 
+	// ===============================
 	// Hitung rangkaian soal per tipe
+	// ===============================
 	rangkaian := map[string]int{}
-	var testSoal []models.TO_TestSoal
-	db.Where("test_id = ?", test.TestID).Find(&testSoal)
-	for _, ts := range testSoal {
-		rangkaian[ts.TipeSoal]++
+	var butuhReview bool
+
+	// 1. coba ambil dari to_testsoal (untuk tugas / tr)
+	var tipeList []string
+	db.Model(&models.TO_TestSoal{}).
+		Where("test_id = ?", test.TestID).
+		Pluck("tipe_soal", &tipeList)
+
+	// 2. kalau kosong → ambil dari to_sessionsoal join banksoal (untuk ub)
+	if len(tipeList) == 0 {
+		db.Table("to_sessionsoal").
+			Select("to_banksoal.tipe_soal").
+			Joins("JOIN to_banksoal ON to_sessionsoal.soal_id = to_banksoal.soal_id").
+			Where("to_sessionsoal.session_id = ?", session.SessionID).
+			Pluck("to_banksoal.tipe_soal", &tipeList)
 	}
 
-	// deteksi apakah ada soal yang butuh review manual
-	butuhReview := false
-	for _, ts := range testSoal {
-		if ts.TipeSoal == "uraian" || ts.TipeSoal == "isian_singkat" {
+	for _, tipe := range tipeList {
+		rangkaian[tipe]++
+		if tipe == "uraian" || tipe == "isian_singkat" {
 			butuhReview = true
-			break
 		}
 	}
 
+	// ===============================
+	// Build hasil
+	// ===============================
 	res := TestJawabanResult{
 		TestID:      test.TestID,
 		Jenis:       test.TypeTest,
@@ -110,45 +125,65 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 		Judul:       test.Judul,
 		Rangkaian:   rangkaian,
 		ButuhReview: butuhReview,
-		Reviewed:    false, // default
+		Reviewed:    false,
+		Submited:    false,
+		SessionID:   nil, // ✅ Default nil
 	}
 
+	// ❌ belum ada session → belum dikerjakan
 	if err != nil {
-		// ❌ belum ada session → belum dikerjakan
 		res.Status = "❌ belum dikerjakan"
-		res.Reviewed = false
 		return res, nil
 	}
 
-	// ✅ Ada session
+	// ✅ Ada session - SET SESSION ID DI SINI
+	res.SessionID = &session.SessionID // ✅ TAMBAHKAN INI
 	res.Nilai = &session.NilaiAkhir
 	res.Tanggal = &session.StartTime
 
+	// cek apakah sudah ada jawaban final
+	var countJawaban int64
+	db.Table("to_jawabanfinal").
+		Where("session_id = ?", session.SessionID).
+		Count(&countJawaban)
+	if countJawaban > 0 {
+		res.Submited = true
+	}
+
 	if butuhReview {
-		// Hitung jumlah soal subjektif
-		var totalSubjektif int64
+		// hitung soal subjektif di jawabanfinal
+		var totalSubjektif, countBelum int64
 		db.Table("to_jawabanfinal").
-			Joins("JOIN to_testsoal ON to_jawabanfinal.soal_id = to_testsoal.soal_id").
-			Where("to_jawabanfinal.session_id = ? AND to_testsoal.tipe_soal IN (?)",
+			Joins("JOIN to_banksoal ON to_jawabanfinal.soal_id = to_banksoal.soal_id").
+			Where("to_jawabanfinal.session_id = ? AND to_banksoal.tipe_soal IN (?)",
 				session.SessionID, []string{"uraian", "isian_singkat"}).
 			Count(&totalSubjektif)
 
-		// Hitung yang belum dinilai
-		var countBelum int64
 		db.Table("to_jawabanfinal").
-			Joins("JOIN to_testsoal ON to_jawabanfinal.soal_id = to_testsoal.soal_id").
-			Where("to_jawabanfinal.session_id = ? AND to_testsoal.tipe_soal IN (?)",
+			Joins("JOIN to_banksoal ON to_jawabanfinal.soal_id = to_banksoal.soal_id").
+			Where("to_jawabanfinal.session_id = ? AND to_banksoal.tipe_soal IN (?)",
 				session.SessionID, []string{"uraian", "isian_singkat"}).
 			Where("to_jawabanfinal.skor_uraian IS NULL").
 			Count(&countBelum)
 
+		if totalSubjektif > 0 {
+			if countBelum > 0 {
+				res.Status = "⏳ menunggu review"
+				res.Reviewed = false
+			} else {
+				res.Status = "✅ sudah direview"
+				res.Reviewed = true
+			}
+		}
 	} else {
-		// semua objektif → langsung reviewed
-		res.Status = "✅ otomatis dinilai"
-		res.Reviewed = true
+		if res.Submited {
+			res.Status = "✅ otomatis dinilai"
+			res.Reviewed = true
+		}
 	}
-	log.Printf("[DEBUG] test_id=%d siswa_nis=%s butuhReview=%v reviewed=%v status=%s",
-		res.TestID, siswaNIS, res.ButuhReview, res.Reviewed, res.Status)
+
+	log.Printf("[DEBUG] test_id=%d siswa_nis=%s session_id=%v rangkaian=%v status=%s",
+		res.TestID, siswaNIS, res.SessionID, res.Rangkaian, res.Status)
 
 	return res, nil
 }
@@ -157,7 +192,7 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 func GetDetailJawabanBySession(sessionID uint) (map[string]interface{}, error) {
 	db := config.DB
 
-	var session models.TO_TestSession
+	var session models.TestSession
 	if err := db.Preload("Test").
 		Preload("Test.Mapel").
 		Preload("Siswa").
@@ -209,7 +244,7 @@ func GetSiswaByTest(testID uint) ([]map[string]interface{}, error) {
 
 	for _, p := range peserta {
 		// Cek apakah siswa memiliki session
-		var session models.TO_TestSession
+		var session models.TestSession
 		sessionErr := db.Where("test_id = ? AND siswa_nis = ?", testID, p.SiswaNIS).
 			First(&session).Error
 
@@ -255,11 +290,11 @@ func GetTestStatistics(testID uint) (map[string]interface{}, error) {
 	db.Model(&models.TO_Peserta{}).Where("test_id = ?", testID).Count(&totalPeserta)
 
 	// Hitung yang sudah mengerjakan (punya session)
-	db.Model(&models.TO_TestSession{}).Where("test_id = ?", testID).Count(&sudahMengerjakan)
+	db.Model(&models.TestSession{}).Where("test_id = ?", testID).Count(&sudahMengerjakan)
 	belumMengerjakan = totalPeserta - sudahMengerjakan
 
 	// Hitung yang sudah dinilai (nilai_akhir > 0 atau status graded)
-	db.Model(&models.TO_TestSession{}).
+	db.Model(&models.TestSession{}).
 		Where("test_id = ? AND status = ? AND nilai_akhir > 0", testID, "graded").
 		Count(&sudahDinilai)
 
@@ -267,19 +302,19 @@ func GetTestStatistics(testID uint) (map[string]interface{}, error) {
 
 	// Ambil rata-rata nilai
 	var avgNilai float64
-	db.Model(&models.TO_TestSession{}).
+	db.Model(&models.TestSession{}).
 		Where("test_id = ? AND status = ?", testID, "graded").
 		Select("COALESCE(AVG(nilai_akhir), 0)").
 		Scan(&avgNilai)
 
 	// Ambil nilai tertinggi dan terendah
 	var maxNilai, minNilai float64
-	db.Model(&models.TO_TestSession{}).
+	db.Model(&models.TestSession{}).
 		Where("test_id = ? AND status = ?", testID, "graded").
 		Select("COALESCE(MAX(nilai_akhir), 0)").
 		Scan(&maxNilai)
 
-	db.Model(&models.TO_TestSession{}).
+	db.Model(&models.TestSession{}).
 		Where("test_id = ? AND status = ?", testID, "graded").
 		Select("COALESCE(MIN(nilai_akhir), 0)").
 		Scan(&minNilai)
@@ -318,3 +353,330 @@ func GetSiswaDetailForGuru(siswaNIS string) (map[string]interface{}, error) {
 
 	return result, nil
 }
+func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
+	// --- 1. Ambil data session
+	var session struct {
+		SessionID int    `gorm:"column:session_id"`
+		TestID    int    `gorm:"column:test_id"`
+		SiswaNIS  string `gorm:"column:siswa_nis"`
+	}
+	if err := config.DB.Table("to_testsession").
+		Select("session_id, test_id, siswa_nis").
+		Where("session_id = ?", sessionID).
+		Take(&session).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("session %d not found", sessionID)
+		}
+		return nil, err
+	}
+
+	// --- 2. Ambil data test (join ke tbl_mapel untuk nama mapel)
+	var test struct {
+		Judul string `gorm:"column:judul"`
+		Mapel string `gorm:"column:mapel"`
+	}
+	if err := config.DB.Table("to_test t").
+		Select("t.judul, m.nm_mapel AS mapel").
+		Joins("LEFT JOIN tbl_mapel m ON m.kd_mapel = t.mapel_id").
+		Where("t.test_id = ?", session.TestID).
+		Take(&test).Error; err != nil {
+		// kalau tidak ditemukan test, tetap lanjut tapi beri info
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			test.Judul = ""
+			test.Mapel = ""
+		} else {
+			return nil, err
+		}
+	}
+
+	// --- 3. Ambil data siswa
+	// NOTE: gunakan kolom yang benar di tbl_siswa (kemungkinan siswa_nama)
+	var siswa struct {
+		NIS  string `gorm:"column:nis"`
+		Nama string `gorm:"column:nama"`
+	}
+	if err := config.DB.Table("tbl_siswa").
+		Select("siswa_nis AS nis, siswa_nama AS nama").
+		Where("siswa_nis = ?", session.SiswaNIS).
+		Take(&siswa).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// kalau tidak ketemu, biarkan kosong — frontend bisa tangani
+			siswa.NIS = session.SiswaNIS
+			siswa.Nama = ""
+		} else {
+			return nil, err
+		}
+	}
+
+	// --- 4. Ambil jawaban dari banksoal (UB)
+	var ubJawaban []models.JawabanResponse
+	if err := config.DB.Table("to_jawabanfinal j").
+		Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
+        CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
+        CAST(b.jawaban_benar AS CHAR) AS jawaban_benar,
+        CAST(b.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
+        j.skor_objektif, j.skor_uraian,
+        b.bobot AS max_score,  -- TAMBAHKAN BOBOT
+        l.nama_file AS lampiran_nama_file,
+        l.tipe_file AS lampiran_tipe_file,
+        l.path_file AS lampiran_path_file
+    `).
+		Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
+		Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
+		Where("j.session_id = ?", sessionID).
+		Scan(&ubJawaban).Error; err != nil {
+		return nil, err
+	}
+
+	// --- 5. Ambil jawaban dari testsoal (selain UB)
+	var testJawaban []models.JawabanResponse
+	if err := config.DB.Table("to_jawabanfinal j").
+		Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
+        CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
+        CAST(t.jawaban_benar AS CHAR) AS jawaban_benar,
+        j.skor_objektif, j.skor_uraian,
+        t.bobot AS max_score,  -- TAMBAHKAN BOBOT
+        l.nama_file AS lampiran_nama_file,
+        l.tipe_file AS lampiran_tipe_file,
+        l.path_file AS lampiran_path_file
+    `).
+		Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
+		Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
+		Where("j.session_id = ?", sessionID).
+		Scan(&testJawaban).Error; err != nil {
+		return nil, err
+	}
+
+	// --- 6. Gabung jawaban (UB + testsoal)
+	jawaban := append(ubJawaban, testJawaban...)
+
+	// --- 7. Bentuk response final
+	response := map[string]interface{}{
+		"session_id": session.SessionID,
+		"test": map[string]interface{}{
+			"judul": test.Judul,
+			"mapel": test.Mapel,
+		},
+		"siswa": map[string]interface{}{
+			"nis":  siswa.NIS,
+			"nama": siswa.Nama,
+		},
+		"jawaban": jawaban,
+	}
+
+	return response, nil
+}
+func UpdateNilaiJawaban(sessionID int, perubahan []struct {
+	SessionID int     `json:"session_id"`
+	SoalID    uint    `json:"soal_id"`
+	Nilai     float64 `json:"nilai"`
+}) error {
+	db := config.DB
+	log.Printf("[DEBUG] UpdateNilaiJawaban - sessionID: %d, perubahan: %+v", sessionID, perubahan)
+
+	// Mulai transaction
+	tx := db.Begin()
+	if tx.Error != nil {
+		log.Printf("[ERROR] Gagal mulai transaction: %v", tx.Error)
+		return tx.Error
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[ERROR] Panic terjadi: %v", r)
+			tx.Rollback()
+		}
+	}()
+
+	var updatedCount int
+	var errors []string
+
+	for _, p := range perubahan {
+		// Validasi session_id match
+		if p.SessionID != sessionID {
+			errors = append(errors, fmt.Sprintf("session_id tidak match: expected %d, got %d", sessionID, p.SessionID))
+			continue
+		}
+
+		log.Printf("[DEBUG] Updating soal_id %d dengan nilai %.2f", p.SoalID, p.Nilai)
+
+		// Handle nilai 0 - set menjadi NULL
+		var nilaiUpdate interface{}
+		if p.Nilai == 0 {
+			nilaiUpdate = nil
+		} else {
+			nilaiUpdate = p.Nilai
+		}
+
+		// Update skor_uraian di tabel to_jawabanfinal
+		result := tx.Table("to_jawabanfinal").
+			Where("session_id = ? AND soal_id = ?", sessionID, p.SoalID).
+			Update("skor_uraian", nilaiUpdate)
+
+		if result.Error != nil {
+			log.Printf("[ERROR] Gagal update jawaban: %v", result.Error)
+			errors = append(errors, fmt.Sprintf("gagal update soal_id %d: %v", p.SoalID, result.Error))
+			continue
+		}
+
+		log.Printf("[DEBUG] Rows affected untuk soal_id %d: %d", p.SoalID, result.RowsAffected)
+
+		if result.RowsAffected == 0 {
+			// Hanya warning, tidak error karena mungkin soal tidak ada di jawabanfinal
+			log.Printf("[WARNING] jawaban tidak ditemukan untuk session_id %d dan soal_id %d", sessionID, p.SoalID)
+		} else {
+			updatedCount++
+		}
+	}
+
+	// Jika ada error yang critical, rollback
+	if len(errors) > 0 {
+		tx.Rollback()
+		return fmt.Errorf("terjadi error: %v", errors)
+	}
+
+	// Jika tidak ada yang berhasil diupdate, rollback dan return error
+	if updatedCount == 0 {
+		tx.Rollback()
+		return fmt.Errorf("tidak ada jawaban yang berhasil diupdate")
+	}
+
+	// Hitung ulang nilai akhir setelah update semua jawaban
+	if err := hitungUlangNilaiAkhir(tx, sessionID); err != nil {
+		log.Printf("[ERROR] Gagal hitung ulang nilai: %v", err)
+		tx.Rollback()
+		return err
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		log.Printf("[ERROR] Gagal commit transaction: %v", err)
+		return err
+	}
+
+	log.Printf("[INFO] %d nilai berhasil diupdate untuk session %d", updatedCount, sessionID)
+	return nil
+}
+
+// Fungsi untuk menghitung ulang nilai akhir
+func hitungUlangNilaiAkhir(tx *gorm.DB, sessionID int) error {
+	log.Printf("[DEBUG] hitungUlangNilaiAkhir - sessionID: %d", sessionID)
+
+	// Ambil semua jawaban untuk session ini
+	var jawaban []struct {
+		SkorObjektif float64
+		SkorUraian   *float64
+		Bobot        float64
+	}
+
+	// Query untuk mendapatkan skor dan bobot
+	err := tx.Table("to_jawabanfinal jf").
+		Select(`
+			jf.skor_objektif, 
+			jf.skor_uraian,
+			COALESCE(bs.bobot, ts.bobot, 1.00) as bobot
+		`).
+		Joins("LEFT JOIN to_banksoal bs ON bs.soal_id = jf.soal_id").
+		Joins("LEFT JOIN to_testsoal ts ON ts.testsoal_id = jf.soal_id").
+		Where("jf.session_id = ?", sessionID).
+		Scan(&jawaban).Error
+
+	if err != nil {
+		log.Printf("[ERROR] Gagal query jawaban: %v", err)
+		return err
+	}
+
+	log.Printf("[DEBUG] Jumlah jawaban ditemukan: %d", len(jawaban))
+
+	// Hitung total skor
+	var totalSkor float64
+	var totalBobot float64
+
+	for i, j := range jawaban {
+		// Gunakan skor_uraian jika ada, otherwise gunakan skor_objektif
+		skor := j.SkorObjektif
+		if j.SkorUraian != nil {
+			skor = *j.SkorUraian
+		}
+
+		totalSkor += skor * j.Bobot
+		totalBobot += j.Bobot
+		log.Printf("[DEBUG] Jawaban %d: skor=%.2f, bobot=%.2f", i+1, skor, j.Bobot)
+	}
+
+	// Hitung nilai akhir (dalam skala 100)
+	var nilaiAkhir float64
+	if totalBobot > 0 {
+		nilaiAkhir = (totalSkor / totalBobot) * 100
+	}
+
+	log.Printf("[DEBUG] Total skor: %.2f, Total bobot: %.2f, Nilai akhir: %.2f", totalSkor, totalBobot, nilaiAkhir)
+
+	// Update nilai_akhir di tabel to_testsession
+	result := tx.Table("to_testsession").
+		Where("session_id = ?", sessionID).
+		Updates(map[string]interface{}{
+			"nilai_akhir": nilaiAkhir,
+			"status":      "graded",
+		})
+
+	if result.Error != nil {
+		log.Printf("[ERROR] Gagal update testsession: %v", result.Error)
+		return result.Error
+	}
+
+	log.Printf("[DEBUG] Testsession updated, rows affected: %d", result.RowsAffected)
+
+	if result.RowsAffected == 0 {
+		errMsg := fmt.Sprintf("session tidak ditemukan: %d", sessionID)
+		log.Printf("[ERROR] %s", errMsg)
+		return fmt.Errorf(errMsg)
+	}
+
+	return nil
+}
+
+func UpdateNilaiAkhir(sessionID int, nilaiAkhir float64) error {
+	db := config.DB
+	log.Printf("[DEBUG] UpdateNilaiAkhir - sessionID: %d, nilaiAkhir: %.2f", sessionID, nilaiAkhir)
+
+	// Update nilai_akhir di tabel to_testsession
+	result := db.Table("to_testsession").
+		Where("session_id = ?", sessionID).
+		Updates(map[string]interface{}{
+			"nilai_akhir": nilaiAkhir,
+			"status":      "graded",
+		})
+
+	if result.Error != nil {
+		log.Printf("[ERROR] Gagal update testsession: %v", result.Error)
+		return result.Error
+	}
+
+	log.Printf("[DEBUG] Testsession updated, rows affected: %d", result.RowsAffected)
+
+	if result.RowsAffected == 0 {
+		errMsg := fmt.Sprintf("session tidak ditemukan: %d", sessionID)
+		log.Printf("[ERROR] %s", errMsg)
+		return fmt.Errorf(errMsg)
+	}
+
+	return nil
+}
+
+// func GetSoalByPenilaianID(db *gorm.DB, testID uint) ([]models.TO_Soal, error) {
+// 	var soal []models.TO_Soal
+
+// 	err := db.
+// 		Preload("PilihanJawaban").
+// 		Preload("JawabanBenar").
+// 		Preload("Lampiran").
+// 		Where("test_id = ?", testID).
+// 		Find(&soal).Error
+
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return soal, nil
+// }
