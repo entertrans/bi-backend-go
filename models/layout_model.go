@@ -10,6 +10,7 @@ type JawabanResponse struct {
 	SkorObjektif   float64  `json:"skor_objektif"`
 	SkorUraian     *float64 `json:"skor_uraian"`
 	MaxScore       float64  `json:"max_score"` // TAMBAHKAN BOBOT/MAX SCORE
+	Score          float64  `json:"skor"`      // TAMBAHKAN BOBOT/MAX SCORE
 	// Tambahkan field untuk lampiran
 	LampiranNamaFile *string `json:"lampiran_nama_file,omitempty"`
 	LampiranTipeFile *string `json:"lampiran_tipe_file,omitempty"`

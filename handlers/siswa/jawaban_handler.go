@@ -2,8 +2,11 @@ package siswa
 
 import (
 	"net/http"
+	"strconv"
 
+	"github.com/entertrans/bi-backend-go/config"
 	siswaControllers "github.com/entertrans/bi-backend-go/controllers/siswa"
+	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,4 +37,30 @@ func SaveJawabanHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Jawaban tersimpan"})
+}
+
+func GetNilaiHandler(c *gin.Context) {
+	sessionIDStr := c.Param("session_id")
+	sessionID, err := strconv.Atoi(sessionIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Session ID tidak valid"})
+		return
+	}
+
+	db := config.DB
+	var session models.TestSession
+	if err := db.Preload("Test").Preload("Siswa").First(&session, "session_id = ?", sessionID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Session tidak ditemukan"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"session_id":  session.SessionID,
+		"siswa_nis":   session.SiswaNIS,
+		"siswa_nama":  session.Siswa.SiswaNama,
+		"test_judul":  session.Test.Judul,
+		"nilai_awal":  session.NilaiAwal,
+		"nilai_akhir": session.NilaiAkhir,
+		"status":      session.Status,
+	})
 }

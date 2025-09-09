@@ -186,6 +186,32 @@ func UpdateOverrideNilai(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Nilai akhir berhasil diupdate"})
 }
 
+func ResetTestSessionHandler(c *gin.Context) {
+	sessionIdStr := c.Param("session_id")
+	sessionId, err := strconv.ParseUint(sessionIdStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Session ID tidak valid",
+		})
+		return
+	}
+
+	err = gurucontrollers.ResetTestSession(uint(sessionId))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal reset test: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Test berhasil direset",
+	})
+}
+
 // func GetSoalPenilaianHandler(c *gin.Context) {
 // 	sessionIDStr := c.Param("test_id")
 // 	sessionID, err := strconv.Atoi(sessionIDStr)

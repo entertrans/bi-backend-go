@@ -354,14 +354,15 @@ func GetSiswaDetailForGuru(siswaNIS string) (map[string]interface{}, error) {
 	return result, nil
 }
 func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
-	// --- 1. Ambil data session
+	// --- 1. Ambil data session (tambah nilai_akhir)
 	var session struct {
-		SessionID int    `gorm:"column:session_id"`
-		TestID    int    `gorm:"column:test_id"`
-		SiswaNIS  string `gorm:"column:siswa_nis"`
+		SessionID  int     `gorm:"column:session_id"`
+		TestID     int     `gorm:"column:test_id"`
+		SiswaNIS   string  `gorm:"column:siswa_nis"`
+		NilaiAkhir float64 `gorm:"column:nilai_akhir"`
 	}
 	if err := config.DB.Table("to_testsession").
-		Select("session_id, test_id, siswa_nis").
+		Select("session_id, test_id, siswa_nis, nilai_akhir").
 		Where("session_id = ?", sessionID).
 		Take(&session).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -390,7 +391,6 @@ func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
 	}
 
 	// --- 3. Ambil data siswa
-	// NOTE: gunakan kolom yang benar di tbl_siswa (kemungkinan siswa_nama)
 	var siswa struct {
 		NIS  string `gorm:"column:nis"`
 		Nama string `gorm:"column:nama"`
@@ -400,7 +400,6 @@ func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
 		Where("siswa_nis = ?", session.SiswaNIS).
 		Take(&siswa).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// kalau tidak ketemu, biarkan kosong — frontend bisa tangani
 			siswa.NIS = session.SiswaNIS
 			siswa.Nama = ""
 		} else {
@@ -416,7 +415,7 @@ func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
         CAST(b.jawaban_benar AS CHAR) AS jawaban_benar,
         CAST(b.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
         j.skor_objektif, j.skor_uraian,
-        b.bobot AS max_score,  -- TAMBAHKAN BOBOT
+        b.bobot AS max_score,
         l.nama_file AS lampiran_nama_file,
         l.tipe_file AS lampiran_tipe_file,
         l.path_file AS lampiran_path_file
@@ -435,7 +434,7 @@ func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
         CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
         CAST(t.jawaban_benar AS CHAR) AS jawaban_benar,
         j.skor_objektif, j.skor_uraian,
-        t.bobot AS max_score,  -- TAMBAHKAN BOBOT
+        t.bobot AS max_score,
         l.nama_file AS lampiran_nama_file,
         l.tipe_file AS lampiran_tipe_file,
         l.path_file AS lampiran_path_file
@@ -450,12 +449,13 @@ func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
 	// --- 6. Gabung jawaban (UB + testsoal)
 	jawaban := append(ubJawaban, testJawaban...)
 
-	// --- 7. Bentuk response final
+	// --- 7. Bentuk response final (gunakan nilai_akhir dari session)
 	response := map[string]interface{}{
 		"session_id": session.SessionID,
 		"test": map[string]interface{}{
 			"judul": test.Judul,
 			"mapel": test.Mapel,
+			"nilai": session.NilaiAkhir, // DIUBAH: gunakan nilai_akhir dari session
 		},
 		"siswa": map[string]interface{}{
 			"nis":  siswa.NIS,
@@ -472,168 +472,100 @@ func UpdateNilaiJawaban(sessionID int, perubahan []struct {
 	Nilai     float64 `json:"nilai"`
 }) error {
 	db := config.DB
-	log.Printf("[DEBUG] UpdateNilaiJawaban - sessionID: %d, perubahan: %+v", sessionID, perubahan)
 
-	// Mulai transaction
 	tx := db.Begin()
 	if tx.Error != nil {
-		log.Printf("[ERROR] Gagal mulai transaction: %v", tx.Error)
 		return tx.Error
 	}
 
-	defer func() {
-		if r := recover(); r != nil {
-			log.Printf("[ERROR] Panic terjadi: %v", r)
-			tx.Rollback()
-		}
-	}()
-
-	var updatedCount int
-	var errors []string
-
 	for _, p := range perubahan {
-		// Validasi session_id match
 		if p.SessionID != sessionID {
-			errors = append(errors, fmt.Sprintf("session_id tidak match: expected %d, got %d", sessionID, p.SessionID))
-			continue
+			tx.Rollback()
+			return fmt.Errorf("session_id tidak match")
 		}
 
-		log.Printf("[DEBUG] Updating soal_id %d dengan nilai %.2f", p.SoalID, p.Nilai)
-
-		// Handle nilai 0 - set menjadi NULL
-		var nilaiUpdate interface{}
-		if p.Nilai == 0 {
-			nilaiUpdate = nil
-		} else {
-			nilaiUpdate = p.Nilai
+		// Update menggunakan model
+		var jawaban models.JawabanFinal
+		if err := tx.Where("session_id = ? AND soal_id = ?", sessionID, p.SoalID).
+			First(&jawaban).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("jawaban tidak ditemukan untuk soal_id %d", p.SoalID)
 		}
 
-		// Update skor_uraian di tabel to_jawabanfinal
-		result := tx.Table("to_jawabanfinal").
-			Where("session_id = ? AND soal_id = ?", sessionID, p.SoalID).
-			Update("skor_uraian", nilaiUpdate)
-
-		if result.Error != nil {
-			log.Printf("[ERROR] Gagal update jawaban: %v", result.Error)
-			errors = append(errors, fmt.Sprintf("gagal update soal_id %d: %v", p.SoalID, result.Error))
-			continue
-		}
-
-		log.Printf("[DEBUG] Rows affected untuk soal_id %d: %d", p.SoalID, result.RowsAffected)
-
-		if result.RowsAffected == 0 {
-			// Hanya warning, tidak error karena mungkin soal tidak ada di jawabanfinal
-			log.Printf("[WARNING] jawaban tidak ditemukan untuk session_id %d dan soal_id %d", sessionID, p.SoalID)
-		} else {
-			updatedCount++
+		jawaban.SkorUraian = &p.Nilai
+		if err := tx.Save(&jawaban).Error; err != nil {
+			tx.Rollback()
+			return err
 		}
 	}
 
-	// Jika ada error yang critical, rollback
-	if len(errors) > 0 {
-		tx.Rollback()
-		return fmt.Errorf("terjadi error: %v", errors)
-	}
-
-	// Jika tidak ada yang berhasil diupdate, rollback dan return error
-	if updatedCount == 0 {
-		tx.Rollback()
-		return fmt.Errorf("tidak ada jawaban yang berhasil diupdate")
-	}
-
-	// Hitung ulang nilai akhir setelah update semua jawaban
-	if err := hitungUlangNilaiAkhir(tx, sessionID); err != nil {
-		log.Printf("[ERROR] Gagal hitung ulang nilai: %v", err)
+	// Hitung ulang nilai dengan mempertimbangkan max_score
+	if err := hitungNilaiAkhirDenganBobot(tx, sessionID); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Commit transaction
-	if err := tx.Commit().Error; err != nil {
-		log.Printf("[ERROR] Gagal commit transaction: %v", err)
-		return err
-	}
-
-	log.Printf("[INFO] %d nilai berhasil diupdate untuk session %d", updatedCount, sessionID)
-	return nil
+	return tx.Commit().Error
 }
 
-// Fungsi untuk menghitung ulang nilai akhir
-func hitungUlangNilaiAkhir(tx *gorm.DB, sessionID int) error {
-	log.Printf("[DEBUG] hitungUlangNilaiAkhir - sessionID: %d", sessionID)
-
-	// Ambil semua jawaban untuk session ini
+func hitungNilaiAkhirDenganBobot(tx *gorm.DB, sessionID int) error {
+	// Ambil semua jawaban dengan informasi bobot/max_score
 	var jawaban []struct {
-		SkorObjektif float64
-		SkorUraian   *float64
-		Bobot        float64
+		models.JawabanFinal
+		MaxScore float64 `gorm:"column:max_score"`
 	}
 
-	// Query untuk mendapatkan skor dan bobot
+	// Query yang mengambil max_score dari banksoal atau testsoal
 	err := tx.Table("to_jawabanfinal jf").
-		Select(`
-			jf.skor_objektif, 
-			jf.skor_uraian,
-			COALESCE(bs.bobot, ts.bobot, 1.00) as bobot
-		`).
+		Select("jf.*, COALESCE(bs.bobot, ts.bobot, 1.0) as max_score").
 		Joins("LEFT JOIN to_banksoal bs ON bs.soal_id = jf.soal_id").
 		Joins("LEFT JOIN to_testsoal ts ON ts.testsoal_id = jf.soal_id").
 		Where("jf.session_id = ?", sessionID).
 		Scan(&jawaban).Error
 
 	if err != nil {
-		log.Printf("[ERROR] Gagal query jawaban: %v", err)
 		return err
 	}
 
-	log.Printf("[DEBUG] Jumlah jawaban ditemukan: %d", len(jawaban))
-
-	// Hitung total skor
 	var totalSkor float64
-	var totalBobot float64
+	var totalMaxScore float64
 
-	for i, j := range jawaban {
+	for _, j := range jawaban {
 		// Gunakan skor_uraian jika ada, otherwise gunakan skor_objektif
 		skor := j.SkorObjektif
 		if j.SkorUraian != nil {
 			skor = *j.SkorUraian
 		}
 
-		totalSkor += skor * j.Bobot
-		totalBobot += j.Bobot
-		log.Printf("[DEBUG] Jawaban %d: skor=%.2f, bobot=%.2f", i+1, skor, j.Bobot)
+		// Pastikan skor tidak melebihi max_score
+		if skor > j.MaxScore {
+			skor = j.MaxScore
+		}
+
+		totalSkor += skor
+		totalMaxScore += j.MaxScore
 	}
 
 	// Hitung nilai akhir (dalam skala 100)
-	var nilaiAkhir float64
-	if totalBobot > 0 {
-		nilaiAkhir = (totalSkor / totalBobot) * 100
+	nilaiAkhir := 0.0
+	if totalMaxScore > 0 {
+		nilaiAkhir = (totalSkor / totalMaxScore) * 100
 	}
 
-	log.Printf("[DEBUG] Total skor: %.2f, Total bobot: %.2f, Nilai akhir: %.2f", totalSkor, totalBobot, nilaiAkhir)
-
-	// Update nilai_akhir di tabel to_testsession
-	result := tx.Table("to_testsession").
-		Where("session_id = ?", sessionID).
-		Updates(map[string]interface{}{
-			"nilai_akhir": nilaiAkhir,
-			"status":      "graded",
-		})
-
-	if result.Error != nil {
-		log.Printf("[ERROR] Gagal update testsession: %v", result.Error)
-		return result.Error
+	// Pastikan nilai tidak melebihi 100
+	if nilaiAkhir > 100 {
+		nilaiAkhir = 100
 	}
 
-	log.Printf("[DEBUG] Testsession updated, rows affected: %d", result.RowsAffected)
-
-	if result.RowsAffected == 0 {
-		errMsg := fmt.Sprintf("session tidak ditemukan: %d", sessionID)
-		log.Printf("[ERROR] %s", errMsg)
-		return fmt.Errorf(errMsg)
+	// Update session
+	var session models.TestSession
+	if err := tx.First(&session, sessionID).Error; err != nil {
+		return err
 	}
 
-	return nil
+	session.NilaiAkhir = nilaiAkhir
+	session.Status = "graded"
+	return tx.Save(&session).Error
 }
 
 func UpdateNilaiAkhir(sessionID int, nilaiAkhir float64) error {
@@ -659,6 +591,36 @@ func UpdateNilaiAkhir(sessionID int, nilaiAkhir float64) error {
 		errMsg := fmt.Sprintf("session tidak ditemukan: %d", sessionID)
 		log.Printf("[ERROR] %s", errMsg)
 		return fmt.Errorf(errMsg)
+	}
+
+	return nil
+}
+
+func ResetTestSession(sessionID uint) error {
+	db := config.DB
+
+	// Pastikan session ada
+	var session models.TestSession
+	if err := db.First(&session, "session_id = ?", sessionID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("session tidak ditemukan")
+		}
+		return err
+	}
+
+	// Hapus jawaban final
+	if err := db.Where("session_id = ?", sessionID).Delete(&models.JawabanFinal{}).Error; err != nil {
+		return err
+	}
+
+	// Hapus session soal
+	if err := db.Where("session_id = ?", sessionID).Delete(&models.TO_SessionSoal{}).Error; err != nil {
+		return err
+	}
+
+	// Hapus test session
+	if err := db.Where("session_id = ?", sessionID).Delete(&models.TestSession{}).Error; err != nil {
+		return err
 	}
 
 	return nil
