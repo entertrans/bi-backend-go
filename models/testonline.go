@@ -26,12 +26,22 @@ type TO_Test struct {
 	Mapel Mapel `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
 	Guru  Guru  `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
 	Kelas Kelas `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
+	SoalIDs []uint `json:"soal_ids" gorm:"-"`
 }
 
 func (TO_Test) TableName() string {
 	return "TO_Test"
 }
+type TO_TestSoalRelasi struct {
+	ID     uint `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
+	TestID uint `json:"test_id" gorm:"column:test_id;not null"`
+	SoalID uint `json:"soal_id" gorm:"column:soal_id;not null"`
+}
 
+// TableName specifies the table name
+func (TO_TestSoalRelasi) TableName() string {
+	return "to_test_soal"
+}
 type TO_Peserta struct {
 	PesertaID  uint      `json:"peserta_id" gorm:"column:peserta_id;primaryKey;autoIncrement"`
 	TestID     uint      `json:"test_id" gorm:"column:test_id"`

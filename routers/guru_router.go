@@ -29,6 +29,11 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		guruGroup.GET("/test/:test_id", guruhandlers.GetTestHandler)
 		guruGroup.PUT("/test/:test_id", guruhandlers.UpdateTestAktifHandler)
 		guruGroup.DELETE("/test/:test_id", guruhandlers.DeleteTestHandler)
+		// guruGroup.GET("/by-kelas-mapel", guruhandlers.GetBankSoalByKelasMapelHandler)
+		// guruGroup.GET("/by-kelas-mapel/count", guruhandlers.GetBankSoalByKelasMapelCountHandler)
+		guruGroup.DELETE("/:testId/soal/:soalId", guruhandlers.RemoveSoalFromTestHandler)
+		guruGroup.GET("/by-kelas-mapel", guruhandlers.GetBankSoalByKelasMapelHandler)
+		guruGroup.POST("/tests/:testId/add-soal", guruhandlers.AddSoalToTestHandler)
 		// Routes penilaian
 		// guruGroup.GET("/penilaian/:final_id", guruhandlers.GetPenilaianHandler)
 		// guruGroup.POST("/penilaian", guruhandlers.CreatePenilaianHandler)

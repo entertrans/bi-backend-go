@@ -8,21 +8,198 @@ import (
 	gurucontrollers "github.com/entertrans/bi-backend-go/controllers/guru"
 	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // Create test
+// func CreateTestHandler(c *gin.Context) {
+// 	var test models.TO_Test
+// 	if err := c.ShouldBindJSON(&test); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// 		return
+// 	}
+// 	if err := gurucontrollers.CreateTest(&test); err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+// 		return
+// 	}
+// 	c.JSON(http.StatusCreated, test)
+// }
+
 func CreateTestHandler(c *gin.Context) {
 	var test models.TO_Test
+
 	if err := c.ShouldBindJSON(&test); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	if err := gurucontrollers.CreateTest(&test); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, test)
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Test berhasil dibuat",
+		"test_id": test.TestID,
+		"soal_ids": test.SoalIDs,
+	})
 }
+
+// new
+type AddSoalRequest struct {
+    SoalIDs []uint `json:"soal_ids" binding:"required"`
+}
+
+func AddSoalToTestHandler(c *gin.Context) {
+    // Ambil testID dari path parameter
+    testIDStr := c.Param("testId")
+    testID, err := strconv.ParseUint(testIDStr, 10, 32)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid test ID"})
+        return
+    }
+
+    var req AddSoalRequest
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    if err := gurucontrollers.AddSoalToTest(uint(testID), req.SoalIDs); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "message": "Soal berhasil ditambahkan ke test",
+        "count":   len(req.SoalIDs),
+    })
+}
+// GetBankSoalByKelasMapelHandler handler untuk endpoint /banksoal/by-kelas-mapel
+func GetBankSoalByKelasMapelHandler(c *gin.Context) {
+	// Ambil parameter dari query string
+	kelasIDStr := c.Query("kelas_id")
+	mapelIDStr := c.Query("mapel_id")
+	testIDStr := c.Query("test_id") // parameter baru
+
+	// Validasi parameter wajib
+	if kelasIDStr == "" || mapelIDStr == "" || testIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Parameter kelas_id, mapel_id, dan test_id diperlukan",
+		})
+		return
+	}
+
+	// Konversi string ke uint
+	kelasID, err := strconv.ParseUint(kelasIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Parameter kelas_id harus berupa angka",
+		})
+		return
+	}
+
+	mapelID, err := strconv.ParseUint(mapelIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Parameter mapel_id harus berupa angka",
+		})
+		return
+	}
+
+	testID, err := strconv.ParseUint(testIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Parameter test_id harus berupa angka",
+		})
+		return
+	}
+
+	// Panggil controller function
+	soals, selectedSoalIDs, err := gurucontrollers.GetBankSoalByKelasMapel(
+		uint(kelasID), uint(mapelID), uint(testID))
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal mengambil data bank soal",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data": gin.H{
+			"soals": soals,
+			"selected_soal_ids": selectedSoalIDs,
+		},
+	})
+}
+func RemoveSoalFromTestHandler(c *gin.Context) {
+	// Ambil parameter dari URL
+	testIDStr := c.Param("testId")
+	soalIDStr := c.Param("soalId")
+
+	// Validasi parameter
+	if testIDStr == "" || soalIDStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Parameter testId dan soalId diperlukan",
+		})
+		return
+	}
+
+	// Konversi string ke uint
+	testID, err := strconv.ParseUint(testIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Parameter testId harus berupa angka",
+		})
+		return
+	}
+
+	soalID, err := strconv.ParseUint(soalIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Parameter soalId harus berupa angka",
+		})
+		return
+	}
+
+	// Panggil controller function
+	err = gurucontrollers.RemoveSoalFromTest(uint(testID), uint(soalID))
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{
+				"success": false,
+				"message": "Soal tidak ditemukan dalam test",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Gagal menghapus soal dari test",
+			"error":   err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Soal berhasil dihapus dari test",
+	})
+}
+// end new
+
+
 
 // Get tests by type
 func GetTestByType(c *gin.Context) {
