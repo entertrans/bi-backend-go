@@ -29,4 +29,14 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		//test review
 
 	}
+	kisiKisi := r.Group("siswa/kisikisi")
+	{
+		kisiKisi.GET("/", siswaHandler.GetAllKisiKisiHandler)
+		kisiKisi.GET("/:id", siswaHandler.GetKisiKisiByIDHandler)
+		kisiKisi.GET("/kelas/:kelas_id", siswaHandler.GetKisiKisiByKelasHandler)
+		kisiKisi.GET("/mapel/:mapel_id", siswaHandler.GetKisiKisiByMapelHandler)
+		kisiKisi.POST("/", siswaHandler.CreateKisiKisiHandler)
+		kisiKisi.PUT("/:id", siswaHandler.UpdateKisiKisiHandler)
+		kisiKisi.DELETE("/:id", siswaHandler.DeleteKisiKisiHandler)
+	}
 }

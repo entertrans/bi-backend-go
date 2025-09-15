@@ -221,7 +221,10 @@ func GetSoalBySessionID(sessionID uint) ([]SoalDTO, error) {
 		}
 
 		var soals []models.TO_TestSoal
-		if err := config.DB.Where("testsoal_id IN (?)", soalIDs).Preload("Lampiran").Find(&soals).Error; err != nil {
+		if err := config.DB.
+			Where("testsoal_id IN (?)", soalIDs).
+			Preload("Lampiran").
+			Find(&soals).Error; err != nil {
 			return nil, fmt.Errorf("gagal ambil soal test: %w", err)
 		}
 
@@ -231,10 +234,11 @@ func GetSoalBySessionID(sessionID uint) ([]SoalDTO, error) {
 				TipeSoal:         s.TipeSoal,
 				Pertanyaan:       s.Pertanyaan,
 				LampiranID:       s.LampiranID,
+				Lampiran:         s.Lampiran, // ✅ FIX
 				PilihanJawaban:   s.PilihanJawaban,
 				JawabanBenar:     s.JawabanBenar,
 				Bobot:            s.Bobot,
-				JawabanTersimpan: jawabanMap[s.TestsoalID], // <<<< diset di sini juga
+				JawabanTersimpan: jawabanMap[s.TestsoalID],
 			})
 		}
 	}
