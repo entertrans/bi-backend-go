@@ -34,9 +34,6 @@ func CreateTest(test *models.TO_Test) error {
 	return nil
 }
 
-
-
-
 // Get test by type (ub / tr/ tugas)
 func GetTestByType(tipe string) ([]models.TO_Test, error) {
 	var tests []models.TO_Test
@@ -49,12 +46,43 @@ func GetTestByType(tipe string) ([]models.TO_Test, error) {
 		Find(&tests).Error
 	return tests, err
 }
+
 //new
 
-// GetSoalAlreadyInTest mengambil soal yang sudah ada dalam test tertentu
-func GetSoalAlreadyInTest(testID uint) ([]uint, error) {
+// GetBankSoalByKelasMapel mengambil bank soal dengan yang sudah dipilih di paling atas
+func GetBankSoalByKelasMapel(kelasID, mapelID, testID uint) ([]models.TO_BankSoal, []uint, error) {
+	// Ambil soal yang sudah dipilih dalam test
+	selectedSoalIDs, err := getSoalAlreadyInTest(testID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var soals []models.TO_BankSoal
+
+	// Query dengan left join untuk ordering yang optimal
+	err = config.DB.
+		Preload("Guru").
+		Preload("Kelas").
+		Preload("Mapel").
+		Preload("Lampiran").
+		Select("to_banksoal.*, CASE WHEN ts.soal_id IS NOT NULL THEN 1 ELSE 0 END as is_selected").
+		Joins("LEFT JOIN to_test_soal ts ON to_banksoal.soal_id = ts.soal_id AND ts.test_id = ?", testID).
+		Where("to_banksoal.kelas_id = ? AND to_banksoal.mapel_id = ? AND to_banksoal.deleted_at IS NULL", kelasID, mapelID).
+		// Urutkan: yang sudah dipilih dulu, kemudian created_at DESC
+		Order("is_selected DESC, to_banksoal.created_at DESC").
+		Find(&soals).Error
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return soals, selectedSoalIDs, nil
+}
+
+// getSoalAlreadyInTest helper function untuk mengambil soal yang sudah ada dalam test
+func getSoalAlreadyInTest(testID uint) ([]uint, error) {
 	var soalIDs []uint
-	
+
 	err := config.DB.
 		Model(&models.TO_TestSoalRelasi{}).
 		Where("test_id = ?", testID).
@@ -65,33 +93,6 @@ func GetSoalAlreadyInTest(testID uint) ([]uint, error) {
 	}
 
 	return soalIDs, nil
-}
-
-// GetBankSoalByKelasMapelWithSelection mengambil bank soal dengan info sudah dipilih atau belum
-func GetBankSoalByKelasMapel(kelasID, mapelID, testID uint) ([]models.TO_BankSoal, []uint, error) {
-	var soals []models.TO_BankSoal
-	
-	// Ambil bank soal
-	err := config.DB.
-		Preload("Guru").
-		Preload("Kelas").
-		Preload("Mapel").
-		Preload("Lampiran").
-		Where("kelas_id = ? AND mapel_id = ? AND deleted_at IS NULL", kelasID, mapelID).
-		Order("created_at DESC").
-		Find(&soals).Error
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Ambil soal yang sudah dipilih
-	selectedSoalIDs, err := GetSoalAlreadyInTest(testID)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return soals, selectedSoalIDs, nil
 }
 
 func RemoveSoalFromTest(testID, soalID uint) error {
@@ -127,6 +128,7 @@ func AddSoalToTest(testID uint, soalIDs []uint) error {
 	}
 	return nil
 }
+
 // end new
 
 // Get all tests by guru_id

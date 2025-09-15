@@ -88,14 +88,22 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil soal: %w", err)
 	}
+	// cek apakah jumlah soal yg dipilih guru mencukupi jumlah tampil
+	// if int(test.Jumlah) > len(soalList) {
+	// 	// pilihan: return error agar guru harus memilih cukup soal
+	// 	// atau bisa lanjut dengan whatever available (ganti behavior di sini sesuai preferensimu)
+	// 	return nil, fmt.Errorf("jumlah soal tampil yang diminta (%d) lebih besar dari soal yang dipilih guru (%d)", test.Jumlah, len(soalList))
+	// }
 
 	// 🎲 ACAK SOAL JIKA DIBUTUHKAN
 	if test.RandomSoal {
 		rand.Seed(time.Now().UnixNano())
-		rand.Shuffle(len(soalList), func(i, j int) {
-			soalList[i], soalList[j] = soalList[j], soalList[i]
-		})
+		rand.Shuffle(len(soalList), func(i, j int) { soalList[i], soalList[j] = soalList[j], soalList[i] })
 	}
+	// BATASI sesuai jumlah
+	// if test.Jumlah > 0 && len(soalList) > int(test.Jumlah) {
+	// 	soalList = soalList[:int(test.Jumlah)]
+	// }
 
 	// 💾 SIMPAN URUTAN SOAL FIX KE to_sessionsoal
 	for i, soal := range soalList {
@@ -177,28 +185,35 @@ func GetSoalBySessionID(sessionID uint) ([]SoalDTO, error) {
 		}
 
 		var soals []models.TO_BankSoal
-		if err := config.DB.Where("soal_id IN (?)", soalIDs).Preload("Lampiran").Find(&soals).Error; err != nil {
+		if err := config.DB.
+			Where("soal_id IN ?", soalIDs).
+			Preload("Lampiran").
+			Find(&soals).Error; err != nil {
 			return nil, fmt.Errorf("gagal ambil soal bank: %w", err)
 		}
 
+		// Buat map untuk lookup cepat
+		soalMap := make(map[uint]models.TO_BankSoal)
 		for _, s := range soals {
-			soalDTOs = append(soalDTOs, SoalDTO{
-				SoalID:     s.SoalID,
-				TipeSoal:   s.TipeSoal,
-				Pertanyaan: s.Pertanyaan,
-				LampiranID: s.LampiranID,
-
-				// 👇 tambahan ini
-				Lampiran: s.Lampiran,
-
-				PilihanJawaban:   s.PilihanJawaban,
-				JawabanBenar:     s.JawabanBenar,
-				Bobot:            s.Bobot,
-				JawabanTersimpan: jawabanMap[s.SoalID],
-			})
-
+			soalMap[s.SoalID] = s
 		}
 
+		// SUSUN ULANG sesuai urutan di sessionSoals
+		for _, ss := range sessionSoals {
+			if s, ok := soalMap[ss.SoalID]; ok {
+				soalDTOs = append(soalDTOs, SoalDTO{
+					SoalID:           s.SoalID,
+					TipeSoal:         s.TipeSoal,
+					Pertanyaan:       s.Pertanyaan,
+					LampiranID:       s.LampiranID,
+					Lampiran:         s.Lampiran,
+					PilihanJawaban:   s.PilihanJawaban,
+					JawabanBenar:     s.JawabanBenar,
+					Bobot:            s.Bobot,
+					JawabanTersimpan: jawabanMap[s.SoalID],
+				})
+			}
+		}
 	} else {
 		var soalIDs []uint
 		for _, ss := range sessionSoals {
@@ -419,41 +434,68 @@ func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {
 	// Ambil data test
 	var test models.TO_Test
 	if err := config.DB.First(&test, testID).Error; err != nil {
-		return nil, fmt.Errorf("Test tidak ditemukan")
+		return nil, fmt.Errorf("test tidak ditemukan")
 	}
 
-	var soal []models.TO_BankSoal
-
+	// Jika tipe test adalah UB -> ambil soal dari relasi to_test_soal (TO_TestSoalRelasi)
 	if test.TypeTest == "ub" {
-		// UB: ambil dari bank soal
-		query := config.DB.Where("kelas_id = ? AND mapel_id = ?", test.KelasID, test.MapelID)
-
-		if test.RandomSoal {
-			query = query.Order("RAND()")
+		// Ambil relasi yang dipilih guru (urutkan by id supaya mengikuti urutan insert guru)
+		var relasi []models.TO_TestSoalRelasi
+		if err := config.DB.
+			Where("test_id = ?", test.TestID).
+			Order("id ASC").
+			Find(&relasi).Error; err != nil {
+			return nil, fmt.Errorf("gagal ambil relasi soal: %w", err)
+		}
+		if len(relasi) == 0 {
+			return nil, fmt.Errorf("belum ada soal yang dipilih guru untuk test ini")
 		}
 
-		if test.Jumlah > 0 {
-			query = query.Limit(int(test.Jumlah))
+		// Kumpulkan soalIDs sesuai urutan relasi
+		soalIDs := make([]uint, 0, len(relasi))
+		for _, r := range relasi {
+			soalIDs = append(soalIDs, r.SoalID)
 		}
 
-		if err := query.Preload("Guru").
+		// Ambil semua TO_BankSoal yang berkaitan (GORM biasanya meng-ignore soft deleted)
+		var bankSoals []models.TO_BankSoal
+		if err := config.DB.
+			Where("soal_id IN ?", soalIDs).
+			Preload("Guru").
 			Preload("Kelas").
 			Preload("Mapel").
 			Preload("Lampiran").
-			Find(&soal).Error; err != nil {
-			return nil, err
+			Find(&bankSoals).Error; err != nil {
+			return nil, fmt.Errorf("gagal ambil bank soal: %w", err)
 		}
 
-	} else if test.TypeTest == "tr" || test.TypeTest == "tugas" {
-		// QUIZ: ambil dari tabel to_testsoal
+		// Reorder hasil DB supaya sesuai urutan soalIDs (karena IN() tidak menjaga urutan)
+		mapSoal := make(map[uint]models.TO_BankSoal, len(bankSoals))
+		for _, s := range bankSoals {
+			mapSoal[s.SoalID] = s
+		}
+
+		ordered := make([]models.TO_BankSoal, 0, len(soalIDs))
+		for _, id := range soalIDs {
+			if s, ok := mapSoal[id]; ok {
+				ordered = append(ordered, s)
+			}
+		}
+
+		return ordered, nil
+	}
+
+	// Jika tipe test adalah tr / tugas -> pakai tabel to_testsoal (soal khusus test)
+	if test.TypeTest == "tr" || test.TypeTest == "tugas" {
 		var testSoal []models.TO_TestSoal
-		if err := config.DB.Where("test_id = ?", test.TestID).Find(&testSoal).Error; err != nil {
-			return nil, err
+		if err := config.DB.Where("test_id = ?", test.TestID).Order("testsoal_id ASC").Find(&testSoal).Error; err != nil {
+			return nil, fmt.Errorf("gagal ambil soal khusus test: %w", err)
 		}
 
-		// Konversi TO_TestSoal → TO_BankSoal-like biar frontend gampang render
+		// Konversi ke bentuk TO_BankSoal-like supaya frontend tetap konsisten
+		var res []models.TO_BankSoal
 		for _, ts := range testSoal {
-			soal = append(soal, models.TO_BankSoal{
+			res = append(res, models.TO_BankSoal{
 				SoalID:         ts.TestsoalID,
 				TipeSoal:       ts.TipeSoal,
 				Pertanyaan:     ts.Pertanyaan,
@@ -461,9 +503,11 @@ func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {
 				PilihanJawaban: ts.PilihanJawaban,
 				JawabanBenar:   ts.JawabanBenar,
 				Bobot:          ts.Bobot,
+				CreatedAt:      ts.CreatedAt,
 			})
 		}
+		return res, nil
 	}
 
-	return soal, nil
+	return nil, fmt.Errorf("tipe test tidak dikenali: %s", test.TypeTest)
 }

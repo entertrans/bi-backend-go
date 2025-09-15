@@ -23,15 +23,16 @@ type TO_Test struct {
 	CreatedAt   time.Time  `json:"created_at" gorm:"column:created_at"`
 
 	// Relasi
-	Mapel Mapel `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
-	Guru  Guru  `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
-	Kelas Kelas `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
+	Mapel   Mapel  `gorm:"foreignKey:MapelID;references:KdMapel" json:"mapel"`
+	Guru    Guru   `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
+	Kelas   Kelas  `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
 	SoalIDs []uint `json:"soal_ids" gorm:"-"`
 }
 
 func (TO_Test) TableName() string {
 	return "TO_Test"
 }
+
 type TO_TestSoalRelasi struct {
 	ID     uint `json:"id" gorm:"column:id;primaryKey;autoIncrement"`
 	TestID uint `json:"test_id" gorm:"column:test_id;not null"`
@@ -42,6 +43,7 @@ type TO_TestSoalRelasi struct {
 func (TO_TestSoalRelasi) TableName() string {
 	return "to_test_soal"
 }
+
 type TO_Peserta struct {
 	PesertaID  uint      `json:"peserta_id" gorm:"column:peserta_id;primaryKey;autoIncrement"`
 	TestID     uint      `json:"test_id" gorm:"column:test_id"`
@@ -94,6 +96,7 @@ type TO_BankSoal struct {
 	DeletedAt      gorm.DeletedAt `json:"deleted_at,omitempty" gorm:"index"`
 
 	// Relasi
+	IsSelected       bool         `json:"is_selected" gorm:"-"`
 	JawabanTersimpan interface{}  `gorm:"-" json:"jawaban_tersimpan,omitempty"` // Field virtual
 	Guru             Guru         `json:"guru" gorm:"foreignKey:GuruID;references:GuruID"`
 	Kelas            Kelas        `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"`
