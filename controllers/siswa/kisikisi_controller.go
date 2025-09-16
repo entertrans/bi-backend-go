@@ -17,7 +17,7 @@ func GetKisiKisiByID(kisiKisiID uint) (models.KisiKisi, error) {
 func GetAllKisiKisi() ([]models.KisiKisi, error) {
 	var kisiKisis []models.KisiKisi
 	err := config.DB.Preload("Mapel").Preload("Kelas").
-	Order("kisikisi_ub asc, kisikisi_semester asc").
+	Order("kisikisi_kelas_id asc,kisikisi_mapel asc, kisikisi_semester asc, CAST(kisikisi_ub AS UNSIGNED) asc").
 		Find(&kisiKisis).Error
 	return kisiKisis, err
 }

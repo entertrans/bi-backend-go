@@ -35,7 +35,7 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		kisiKisi.GET("/:id", siswaHandler.GetKisiKisiByIDHandler)
 		kisiKisi.GET("/kelas/:kelas_id", siswaHandler.GetKisiKisiByKelasHandler)
 		kisiKisi.GET("/mapel/:mapel_id", siswaHandler.GetKisiKisiByMapelHandler)
-		kisiKisi.POST("/", siswaHandler.CreateKisiKisiHandler)
+		kisiKisi.POST("", siswaHandler.CreateKisiKisiHandler)
 		kisiKisi.PUT("/:id", siswaHandler.UpdateKisiKisiHandler)
 		kisiKisi.DELETE("/:id", siswaHandler.DeleteKisiKisiHandler)
 	}

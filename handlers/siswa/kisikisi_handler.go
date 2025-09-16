@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/entertrans/bi-backend-go/controllers/siswa"
 	siswaControllers "github.com/entertrans/bi-backend-go/controllers/siswa"
 	"github.com/entertrans/bi-backend-go/models"
 	"github.com/entertrans/bi-backend-go/utils"
@@ -84,25 +85,24 @@ func GetKisiKisiByMapelHandler(c *gin.Context) {
 
 // CreateKisiKisiHandler membuat kisi-kisi baru
 func CreateKisiKisiHandler(c *gin.Context) {
-	var kisiKisi models.KisiKisi
-	
-	if err := c.ShouldBindJSON(&kisiKisi); err != nil {
+	var input models.KisiKisi
+
+	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "Data tidak valid")
 		return
 	}
 
-	// Validasi required fields
-	if kisiKisi.KisiKisiUb == "" || kisiKisi.KisiKisiDeskripsi == "" || kisiKisi.KisiKisiKelasID == 0 {
+	if input.KisiKisiUb == "" || input.KisiKisiDeskripsi == "" || input.KisiKisiKelasID == 0 {
 		utils.RespondError(c, http.StatusBadRequest, "UB, deskripsi, dan kelas ID harus diisi")
 		return
 	}
 
-	if err := siswaControllers.CreateKisiKisi(&kisiKisi); err != nil {
+	if err := siswa.CreateKisiKisi(&input); err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "Gagal membuat kisi-kisi")
 		return
 	}
 
-	utils.RespondJSON(c, http.StatusCreated, kisiKisi)
+	utils.RespondJSON(c, http.StatusCreated, input)
 }
 
 // UpdateKisiKisiHandler mengupdate kisi-kisi
