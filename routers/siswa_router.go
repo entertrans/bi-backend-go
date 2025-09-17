@@ -39,4 +39,12 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		kisiKisi.PUT("/:id", siswaHandler.UpdateKisiKisiHandler)
 		kisiKisi.DELETE("/:id", siswaHandler.DeleteKisiKisiHandler)
 	}
+	invoice := r.Group("siswa/invoice")
+	{
+		// List semua invoice siswa
+		invoice.GET("/history/:nis", siswaHandler.HistoryKeuanganByNISHandler)
+
+		// Detail 1 invoice siswa
+		invoice.GET("/detail/:nis", siswaHandler.InvoiceDetailByNISHandler)
+	}
 }
