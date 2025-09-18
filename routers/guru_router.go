@@ -90,6 +90,6 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		nilaiGroup.GET("/ub/:kelas_id/:mapel_id", guruhandlers.GetDetailUB)
 		nilaiGroup.GET("/tr/:kelas_id/:mapel_id", guruhandlers.GetDetailTR)
 		nilaiGroup.GET("/tugas/:kelas_id/:mapel_id", guruhandlers.GetDetailTugas)
-		nilaiGroup.GET("/:type/peserta/:test_id", guruhandlers.GetDetailPesertaTest)
+		nilaiGroup.GET("/peserta/:type/:test_id/:kelas_id", guruhandlers.GetDetailPesertaTest)
 	}
 }
