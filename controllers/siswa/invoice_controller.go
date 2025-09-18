@@ -94,45 +94,103 @@ type InvoiceDetail struct {
 }
 
 func GetInvoiceDetailByNIS(nis string, idInvoice string) (InvoiceDetail, error) {
-    var penerima models.InvoicePenerima
-    err := config.DB.Preload("Invoice.Tagihan").
-        Preload("Tambahan").
-        Preload("Pembayaran").
-        Where("nis = ? AND id_invoice = ?", nis, idInvoice).
-        First(&penerima).Error
-    if err != nil {
-        return InvoiceDetail{}, err
-    }
+	var penerima models.InvoicePenerima
+	err := config.DB.Preload("Invoice.Tagihan").
+		Preload("Tambahan").
+		Preload("Pembayaran").
+		Where("nis = ? AND id_invoice = ?", nis, idInvoice).
+		First(&penerima).Error
+	if err != nil {
+		return InvoiceDetail{}, err
+	}
 
-    totalTagihan := 0
-    for _, t := range penerima.Invoice.Tagihan {
-        totalTagihan += t.Nominal
-    }
+	totalTagihan := 0
+	for _, t := range penerima.Invoice.Tagihan {
+		totalTagihan += t.Nominal
+	}
 
-    totalTambahan := 0
-    for _, t := range penerima.Tambahan {
-        totalTambahan += t.Nominal
-    }
+	totalTambahan := 0
+	for _, t := range penerima.Tambahan {
+		totalTambahan += t.Nominal
+	}
 
-    totalBayar := 0
-    for _, p := range penerima.Pembayaran {
-        totalBayar += p.Nominal
-    }
+	totalBayar := 0
+	for _, p := range penerima.Pembayaran {
+		totalBayar += p.Nominal
+	}
 
-    totalFinal := totalTagihan - penerima.Potongan + totalTambahan
-    sisa := totalFinal - totalBayar
+	totalFinal := totalTagihan - penerima.Potongan + totalTambahan
+	sisa := totalFinal - totalBayar
 
-    return InvoiceDetail{
-        InvoiceID:       penerima.Invoice.IDInvoice,
-        Deskripsi:       penerima.Invoice.Deskripsi,
-        TglInvoice:      penerima.Invoice.TglInvoice,
-        TglJatuhTempo:   penerima.Invoice.TglJatuhTempo,
-        TagihanUtama:    penerima.Invoice.Tagihan,
-        TagihanTambahan: penerima.Tambahan,
-        Pembayaran:      penerima.Pembayaran,
-        TotalTagihan:    totalFinal,
-        TotalPotongan:   penerima.Potongan,
-        TotalBayar:      totalBayar,
-        SisaTagihan:     sisa,
-    }, nil
+	return InvoiceDetail{
+		InvoiceID:       penerima.Invoice.IDInvoice,
+		Deskripsi:       penerima.Invoice.Deskripsi,
+		TglInvoice:      penerima.Invoice.TglInvoice,
+		TglJatuhTempo:   penerima.Invoice.TglJatuhTempo,
+		TagihanUtama:    penerima.Invoice.Tagihan,
+		TagihanTambahan: penerima.Tambahan,
+		Pembayaran:      penerima.Pembayaran,
+		TotalTagihan:    totalFinal,
+		TotalPotongan:   penerima.Potongan,
+		TotalBayar:      totalBayar,
+		SisaTagihan:     sisa,
+	}, nil
+}
+
+type KwitansiTagihan struct {
+	InvoiceID     string `json:"invoice_id"`
+	Deskripsi     string `json:"deskripsi"`
+	TglInvoice    string `json:"tgl_invoice"`
+	TglJatuhTempo string `json:"tgl_jatuh_tempo"`
+	TotalTagihan  int    `json:"total_tagihan"`
+	TotalBayar    int    `json:"total_bayar"`
+	SisaTagihan   int    `json:"sisa_tagihan"`
+	Status        string `json:"status"` // contoh: "Belum Lunas", "Lunas"
+}
+
+func GetLatestUnpaidInvoiceByNIS(nis string) (KwitansiTagihan, error) {
+	var penerima models.InvoicePenerima
+	err := config.DB.
+		Preload("Invoice.Tagihan").
+		Preload("Tambahan").
+		Preload("Pembayaran").
+		Where("nis = ?", nis).
+		Order("id_invoice DESC"). // ambil yang terbaru
+		First(&penerima).Error
+	if err != nil {
+		return KwitansiTagihan{}, err
+	}
+
+	// Hitung total
+	totalTagihan := 0
+	for _, t := range penerima.Invoice.Tagihan {
+		totalTagihan += t.Nominal
+	}
+	totalTambahan := 0
+	for _, t := range penerima.Tambahan {
+		totalTambahan += t.Nominal
+	}
+	totalBayar := 0
+	for _, p := range penerima.Pembayaran {
+		totalBayar += p.Nominal
+	}
+
+	totalFinal := totalTagihan - penerima.Potongan + totalTambahan
+	sisa := totalFinal - totalBayar
+
+	status := "Lunas"
+	if sisa > 0 {
+		status = "Belum Lunas"
+	}
+
+	return KwitansiTagihan{
+		InvoiceID:     penerima.Invoice.IDInvoice,
+		Deskripsi:     penerima.Invoice.Deskripsi,
+		TglInvoice:    penerima.Invoice.TglInvoice,
+		TglJatuhTempo: penerima.Invoice.TglJatuhTempo,
+		TotalTagihan:  totalFinal,
+		TotalBayar:    totalBayar,
+		SisaTagihan:   sisa,
+		Status:        status,
+	}, nil
 }

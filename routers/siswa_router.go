@@ -46,5 +46,6 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 
 		// Detail 1 invoice siswa
 		invoice.GET("/detail/:nis", siswaHandler.InvoiceDetailByNISHandler)
+		invoice.GET("/:nis/invoice/unpaid-latest", siswaHandler.LatestUnpaidInvoiceHandler)
 	}
 }

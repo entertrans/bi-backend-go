@@ -18,19 +18,36 @@ func HistoryKeuanganByNISHandler(c *gin.Context) {
 }
 
 func InvoiceDetailByNISHandler(c *gin.Context) {
-    nis := c.Param("nis")
-    idInvoice := c.Query("idInvoice") // ambil dari query param
+	nis := c.Param("nis")
+	idInvoice := c.Query("idInvoice") // ambil dari query param
 
-    if idInvoice == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "idInvoice wajib diisi"})
-        return
-    }
+	if idInvoice == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "idInvoice wajib diisi"})
+		return
+	}
 
-    result, err := siswaControllers.GetInvoiceDetailByNIS(nis, idInvoice)
-    if err != nil {
-        c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-        return
-    }
+	result, err := siswaControllers.GetInvoiceDetailByNIS(nis, idInvoice)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
 
-    c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, result)
+}
+func LatestUnpaidInvoiceHandler(c *gin.Context) {
+	nis := c.Param("nis")
+
+	result, err := siswaControllers.GetLatestUnpaidInvoiceByNIS(nis)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada tagihan aktif"})
+		return
+	}
+
+	// Kalau sudah lunas semua, bisa juga return kosong
+	if result.SisaTagihan <= 0 {
+		c.JSON(http.StatusOK, gin.H{"message": "Semua tagihan sudah lunas"})
+		return
+	}
+
+	c.JSON(http.StatusOK, result)
 }
