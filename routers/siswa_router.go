@@ -6,9 +6,6 @@ import (
 )
 
 func RegisterSiswaRoutes(r *gin.Engine) {
-	// r.GET("/guru", adminHandlers.GetAllGuru)
-	// dst...
-
 	siswaRoutes := r.Group("/siswa")
 	{
 		siswaRoutes.POST("/test/start/:test_id", siswaHandler.StartTestHandler)
@@ -27,8 +24,8 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		siswaRoutes.GET("/test/:test_id/soal", siswaHandler.GetSoalHandler)
 
 		//test review
-
 	}
+	
 	kisiKisi := r.Group("siswa/kisikisi")
 	{
 		kisiKisi.GET("/", siswaHandler.GetAllKisiKisiHandler)
@@ -39,6 +36,7 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		kisiKisi.PUT("/:id", siswaHandler.UpdateKisiKisiHandler)
 		kisiKisi.DELETE("/:id", siswaHandler.DeleteKisiKisiHandler)
 	}
+	
 	invoice := r.Group("siswa/invoice")
 	{
 		// List semua invoice siswa
@@ -47,5 +45,16 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		// Detail 1 invoice siswa
 		invoice.GET("/detail/:nis", siswaHandler.InvoiceDetailByNISHandler)
 		invoice.GET("/:nis/invoice/unpaid-latest", siswaHandler.LatestUnpaidInvoiceHandler)
+	}
+	
+	online := r.Group("siswa/online")
+	{
+		online.GET("/", siswaHandler.GetAllOnlineClassHandler)
+		online.GET("/:id", siswaHandler.GetOnlineClassByIDHandler)
+		online.GET("/kelas/:kelas_id", siswaHandler.GetOnlineClassByKelasHandler)
+		online.GET("/mapel/:mapel_id", siswaHandler.GetOnlineClassByMapelHandler)
+		online.POST("/", siswaHandler.CreateOnlineClassHandler)
+		online.PUT("/:id", siswaHandler.UpdateOnlineClassHandler)
+		online.DELETE("/:id", siswaHandler.DeleteOnlineClassHandler)
 	}
 }
