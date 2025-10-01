@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/entertrans/bi-backend-go/config"
@@ -353,119 +354,211 @@ func GetSiswaDetailForGuru(siswaNIS string) (map[string]interface{}, error) {
 
 	return result, nil
 }
-func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
-	// --- 1. Ambil data session (tambah nilai_akhir)
-	var session struct {
-		SessionID  int     `gorm:"column:session_id"`
-		TestID     int     `gorm:"column:test_id"`
-		SiswaNIS   string  `gorm:"column:siswa_nis"`
-		NilaiAkhir float64 `gorm:"column:nilai_akhir"`
-	}
-	if err := config.DB.Table("to_testsession").
-		Select("session_id, test_id, siswa_nis, nilai_akhir").
-		Where("session_id = ?", sessionID).
-		Take(&session).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("session %d not found", sessionID)
-		}
-		return nil, err
-	}
+// func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
+// 	// --- 1. Ambil data session (tambah nilai_akhir)
+// 	var session struct {
+// 		SessionID  int     `gorm:"column:session_id"`
+// 		TestID     int     `gorm:"column:test_id"`
+// 		SiswaNIS   string  `gorm:"column:siswa_nis"`
+// 		NilaiAkhir float64 `gorm:"column:nilai_akhir"`
+// 	}
+// 	if err := config.DB.Table("to_testsession").
+// 		Select("session_id, test_id, siswa_nis, nilai_akhir").
+// 		Where("session_id = ?", sessionID).
+// 		Take(&session).Error; err != nil {
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			return nil, fmt.Errorf("session %d not found", sessionID)
+// 		}
+// 		return nil, err
+// 	}
 
-	// --- 2. Ambil data test (join ke tbl_mapel untuk nama mapel)
-	var test struct {
-		Judul string `gorm:"column:judul"`
-		Mapel string `gorm:"column:mapel"`
-	}
-	if err := config.DB.Table("to_test t").
-		Select("t.judul, m.nm_mapel AS mapel").
-		Joins("LEFT JOIN tbl_mapel m ON m.kd_mapel = t.mapel_id").
-		Where("t.test_id = ?", session.TestID).
-		Take(&test).Error; err != nil {
-		// kalau tidak ditemukan test, tetap lanjut tapi beri info
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			test.Judul = ""
-			test.Mapel = ""
-		} else {
-			return nil, err
-		}
-	}
+// 	// --- 2. Ambil data test (join ke tbl_mapel untuk nama mapel)
+// 	var test struct {
+// 		Judul string `gorm:"column:judul"`
+// 		Mapel string `gorm:"column:mapel"`
+// 	}
+// 	if err := config.DB.Table("to_test t").
+// 		Select("t.judul, m.nm_mapel AS mapel").
+// 		Joins("LEFT JOIN tbl_mapel m ON m.kd_mapel = t.mapel_id").
+// 		Where("t.test_id = ?", session.TestID).
+// 		Take(&test).Error; err != nil {
+// 		// kalau tidak ditemukan test, tetap lanjut tapi beri info
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			test.Judul = ""
+// 			test.Mapel = ""
+// 		} else {
+// 			return nil, err
+// 		}
+// 	}
 
-	// --- 3. Ambil data siswa
-	var siswa struct {
-		NIS  string `gorm:"column:nis"`
-		Nama string `gorm:"column:nama"`
-	}
-	if err := config.DB.Table("tbl_siswa").
-		Select("siswa_nis AS nis, siswa_nama AS nama").
-		Where("siswa_nis = ?", session.SiswaNIS).
-		Take(&siswa).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			siswa.NIS = session.SiswaNIS
-			siswa.Nama = ""
-		} else {
-			return nil, err
-		}
-	}
+// 	// --- 3. Ambil data siswa
+// 	var siswa struct {
+// 		NIS  string `gorm:"column:nis"`
+// 		Nama string `gorm:"column:nama"`
+// 	}
+// 	if err := config.DB.Table("tbl_siswa").
+// 		Select("siswa_nis AS nis, siswa_nama AS nama").
+// 		Where("siswa_nis = ?", session.SiswaNIS).
+// 		Take(&siswa).Error; err != nil {
+// 		if errors.Is(err, gorm.ErrRecordNotFound) {
+// 			siswa.NIS = session.SiswaNIS
+// 			siswa.Nama = ""
+// 		} else {
+// 			return nil, err
+// 		}
+// 	}
 
-	// --- 4. Ambil jawaban dari banksoal (UB)
-	var ubJawaban []models.JawabanResponse
-	if err := config.DB.Table("to_jawabanfinal j").
-		Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
-        CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
-        CAST(b.jawaban_benar AS CHAR) AS jawaban_benar,
-        CAST(b.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
-        j.skor_objektif, j.skor_uraian,
-        b.bobot AS max_score,
-        l.nama_file AS lampiran_nama_file,
-        l.tipe_file AS lampiran_tipe_file,
-        l.path_file AS lampiran_path_file
-    `).
-		Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
-		Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
-		Where("j.session_id = ?", sessionID).
-		Scan(&ubJawaban).Error; err != nil {
-		return nil, err
-	}
+// 	// --- 4. Ambil jawaban dari banksoal (UB)
+// 	var ubJawaban []models.JawabanResponse
+// 	if err := config.DB.Table("to_jawabanfinal j").
+// 		Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
+//         CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
+//         CAST(b.jawaban_benar AS CHAR) AS jawaban_benar,
+//         CAST(b.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
+//         j.skor_objektif, j.skor_uraian,
+//         b.bobot AS max_score,
+//         l.nama_file AS lampiran_nama_file,
+//         l.tipe_file AS lampiran_tipe_file,
+//         l.path_file AS lampiran_path_file
+//     `).
+// 		Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
+// 		Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
+// 		Where("j.session_id = ?", sessionID).
+// 		Scan(&ubJawaban).Error; err != nil {
+// 		return nil, err
+// 	}
 
-	// --- 5. Ambil jawaban dari testsoal (selain UB)
-	var testJawaban []models.JawabanResponse
-	if err := config.DB.Table("to_jawabanfinal j").
-		Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
-        CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
-        CAST(t.jawaban_benar AS CHAR) AS jawaban_benar,
-        j.skor_objektif, j.skor_uraian,
-        t.bobot AS max_score,
-        l.nama_file AS lampiran_nama_file,
-        l.tipe_file AS lampiran_tipe_file,
-        l.path_file AS lampiran_path_file
-    `).
-		Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
-		Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
-		Where("j.session_id = ?", sessionID).
-		Scan(&testJawaban).Error; err != nil {
-		return nil, err
-	}
+// 	// --- 5. Ambil jawaban dari testsoal (selain UB)
+// 	var testJawaban []models.JawabanResponse
+// 	if err := config.DB.Table("to_jawabanfinal j").
+// 		Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
+//         CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
+//         CAST(t.jawaban_benar AS CHAR) AS jawaban_benar,
+//         j.skor_objektif, j.skor_uraian,
+//         t.bobot AS max_score,
+//         l.nama_file AS lampiran_nama_file,
+//         l.tipe_file AS lampiran_tipe_file,
+//         l.path_file AS lampiran_path_file
+//     `).
+// 		Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
+// 		Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
+// 		Where("j.session_id = ?", sessionID).
+// 		Scan(&testJawaban).Error; err != nil {
+// 		return nil, err
+// 	}
 
-	// --- 6. Gabung jawaban (UB + testsoal)
-	jawaban := append(ubJawaban, testJawaban...)
+// 	// --- 6. Gabung jawaban (UB + testsoal)
+// 	jawaban := append(ubJawaban, testJawaban...)
 
-	// --- 7. Bentuk response final (gunakan nilai_akhir dari session)
-	response := map[string]interface{}{
-		"session_id": session.SessionID,
-		"test": map[string]interface{}{
-			"judul": test.Judul,
-			"mapel": test.Mapel,
-			"nilai": session.NilaiAkhir, // DIUBAH: gunakan nilai_akhir dari session
-		},
-		"siswa": map[string]interface{}{
-			"nis":  siswa.NIS,
-			"nama": siswa.Nama,
-		},
-		"jawaban": jawaban,
-	}
+// 	// --- 7. Bentuk response final (gunakan nilai_akhir dari session)
+// 	response := map[string]interface{}{
+// 		"session_id": session.SessionID,
+// 		"test": map[string]interface{}{
+// 			"judul": test.Judul,
+// 			"mapel": test.Mapel,
+// 			"nilai": session.NilaiAkhir, // DIUBAH: gunakan nilai_akhir dari session
+// 		},
+// 		"siswa": map[string]interface{}{
+// 			"nis":  siswa.NIS,
+// 			"nama": siswa.Nama,
+// 		},
+// 		"jawaban": jawaban,
+// 	}
 
-	return response, nil
+// 	return response, nil
+// }
+
+func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{}, error) {
+    // --- 1. Ambil data session
+    var session struct {
+        SessionID  int     `gorm:"column:session_id"`
+        TestID     int     `gorm:"column:test_id"`
+        SiswaNIS   string  `gorm:"column:siswa_nis"`
+        NilaiAkhir float64 `gorm:"column:nilai_akhir"`
+    }
+    if err := config.DB.Table("to_testsession").
+        Select("session_id, test_id, siswa_nis, nilai_akhir").
+        Where("session_id = ?", sessionID).
+        Take(&session).Error; err != nil {
+        return nil, err
+    }
+
+    // --- 2. Ambil data test
+    var test struct {
+        Judul string `gorm:"column:judul"`
+        Mapel string `gorm:"column:mapel"`
+    }
+    config.DB.Table("to_test t").
+        Select("t.judul, m.nm_mapel AS mapel").
+        Joins("LEFT JOIN tbl_mapel m ON m.kd_mapel = t.mapel_id").
+        Where("t.test_id = ?", session.TestID).
+        Take(&test)
+
+    // --- 3. Ambil data siswa
+    var siswa struct {
+        NIS  string `gorm:"column:nis"`
+        Nama string `gorm:"column:nama"`
+    }
+    config.DB.Table("tbl_siswa").
+        Select("siswa_nis AS nis, siswa_nama AS nama").
+        Where("siswa_nis = ?", session.SiswaNIS).
+        Take(&siswa)
+
+    // --- 4. Ambil jawaban sesuai jenis
+    var jawaban []models.JawabanResponse
+
+    if strings.ToUpper(jenis) == "ub" {
+        // kalau jenis UB → ambil dari banksoal
+        config.DB.Table("to_jawabanfinal j").
+            Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
+                CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
+                CAST(b.jawaban_benar AS CHAR) AS jawaban_benar,
+                CAST(b.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
+                j.skor_objektif, j.skor_uraian,
+                b.bobot AS max_score,
+                l.nama_file AS lampiran_nama_file,
+                l.tipe_file AS lampiran_tipe_file,
+                l.path_file AS lampiran_path_file`).
+            Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
+            Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
+            Where("j.session_id = ?", sessionID).
+            Scan(&jawaban)
+    } else {
+        // selain UB → ambil dari testsoal
+        config.DB.Table("to_jawabanfinal j").
+            Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
+                CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
+                CAST(t.jawaban_benar AS CHAR) AS jawaban_benar,
+                j.skor_objektif, j.skor_uraian,
+                t.bobot AS max_score,
+                l.nama_file AS lampiran_nama_file,
+                l.tipe_file AS lampiran_tipe_file,
+                l.path_file AS lampiran_path_file`).
+            Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
+            Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
+            Where("j.session_id = ?", sessionID).
+            Scan(&jawaban)
+    }
+
+    // --- 5. Response final
+    response := map[string]interface{}{
+        "session_id": session.SessionID,
+        "test": map[string]interface{}{
+            "judul": test.Judul,
+            "mapel": test.Mapel,
+            "nilai": session.NilaiAkhir,
+        },
+        "siswa": map[string]interface{}{
+            "nis":  siswa.NIS,
+            "nama": siswa.Nama,
+        },
+        "jawaban": jawaban,
+    }
+
+    return response, nil
 }
+
+
 func UpdateNilaiJawaban(sessionID int, perubahan []struct {
 	SessionID int     `json:"session_id"`
 	SoalID    uint    `json:"soal_id"`

@@ -74,7 +74,6 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 		EndTime:    &endTime,
 		WaktuSisa:  test.DurasiMenit * 60,
 		Status:     "in_progress",
-		NilaiAwal:  0,
 		NilaiAkhir: 0,
 	}
 

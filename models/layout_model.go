@@ -27,7 +27,3 @@ type TO_Soal struct {
 	PilihanJawaban []TO_JawabanFinal `json:"pilihan_jawaban" gorm:"foreignKey:SoalID"`
 	JawabanBenar   []TO_JawabanFinal `json:"jawaban_benar" gorm:"foreignKey:SoalID"`
 }
-
-
-
-

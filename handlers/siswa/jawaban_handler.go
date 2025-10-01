@@ -59,7 +59,6 @@ func GetNilaiHandler(c *gin.Context) {
 		"siswa_nis":   session.SiswaNIS,
 		"siswa_nama":  session.Siswa.SiswaNama,
 		"test_judul":  session.Test.Judul,
-		"nilai_awal":  session.NilaiAwal,
 		"nilai_akhir": session.NilaiAkhir,
 		"status":      session.Status,
 	})

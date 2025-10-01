@@ -98,21 +98,40 @@ func GetSiswaDetailForGuruHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"data": siswaDetail}) // Wrap dalam { data: }
 }
 
+// func GetJawabanBySession(c *gin.Context) {
+// 	sessionID, err := strconv.Atoi(c.Param("session_id"))
+// 	if err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Session ID tidak valid"})
+// 		return
+// 	}
+
+// 	data, err := gurucontrollers.FetchJawabanBySession(sessionID)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, data)
+// }
+
 func GetJawabanBySession(c *gin.Context) {
-	sessionID, err := strconv.Atoi(c.Param("session_id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Session ID tidak valid"})
-		return
-	}
+    sessionID, err := strconv.Atoi(c.Param("session_id"))
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Session ID tidak valid"})
+        return
+    }
 
-	data, err := gurucontrollers.FetchJawabanBySession(sessionID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+    jenis := c.Param("jenis") // ambil parameter "jenis"
 
-	c.JSON(http.StatusOK, data)
+    data, err := gurucontrollers.FetchJawabanBySession(sessionID, jenis)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, data)
 }
+
 
 // update nilai
 func UpdateJawabanFinal(c *gin.Context) {

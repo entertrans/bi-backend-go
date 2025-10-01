@@ -14,7 +14,6 @@ type TestSession struct {
 	EndTime    *time.Time `gorm:"column:end_time"`
 	WaktuSisa  int        `gorm:"column:waktu_sisa"`
 	Status     string     `gorm:"type:enum('in_progress','submitted','graded');default:'in_progress';column:status"`
-	NilaiAwal  float64    `gorm:"type:decimal(5,2);default:0.00;column:nilai_awal"`
 	NilaiAkhir float64    `gorm:"type:decimal(5,2);default:0.00;column:nilai_akhir"`
 	UpdatedAt  time.Time  `gorm:"autoUpdateTime;column:updated_at"`
 

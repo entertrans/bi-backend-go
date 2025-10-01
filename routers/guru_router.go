@@ -76,7 +76,7 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		SiswaJawab.GET("/jawaban/session/:session_id", guruhandlers.GetDetailJawabanHandler)
 		SiswaJawab.GET("/test/:test_id/siswa", guruhandlers.GetSiswaByTestHandler)
 		SiswaJawab.GET("/test/:test_id/statistics", guruhandlers.GetTestStatisticsHandler)
-		SiswaJawab.GET("/session/:session_id/jawaban", guruhandlers.GetJawabanBySession)
+		SiswaJawab.GET("/session/:session_id/:jenis/jawaban", guruhandlers.GetJawabanBySession)
 		SiswaJawab.PUT("/session/:session_id/jawaban", guruhandlers.UpdateJawabanFinal)
 		SiswaJawab.PUT("/session/:session_id/nilai-akhir", guruhandlers.UpdateOverrideNilai)
 		SiswaJawab.DELETE("/test/reset/:session_id", guruhandlers.ResetTestSessionHandler)
