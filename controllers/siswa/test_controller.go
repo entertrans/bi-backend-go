@@ -1,7 +1,10 @@
 package siswa
 
 import (
+	"fmt"
 	"log"
+	"sort"
+	"time"
 
 	"github.com/entertrans/bi-backend-go/config"
 	"github.com/entertrans/bi-backend-go/models"
@@ -73,6 +76,57 @@ func GetSoalByTestID(testID uint) ([]models.TO_TestSoal, error) {
 	}
 
 	return soals, err
+}
+// controller/siswaController.go
+func GetNotStartedTests(nis string) ([]map[string]interface{}, error) {
+	var pesertaList []models.TO_Peserta
+
+	// Ambil semua data peserta dengan status "not_started" untuk NIS tertentu
+	err := config.DB.
+		Preload("Test").
+		Preload("Test.Mapel").
+		Preload("Test.Guru").
+		Preload("Test.Kelas").
+		Where("siswa_nis = ? AND status = ?", nis, "not_started").
+		Find(&pesertaList).Error
+
+	if err != nil {
+		return nil, fmt.Errorf("gagal mengambil data peserta: %w", err)
+	}
+
+	// Filter hanya test yang aktif dan format response
+	var result []map[string]interface{}
+	for _, peserta := range pesertaList {
+		// Skip jika test tidak aktif atau test tidak ada
+		if peserta.Test.Aktif == nil || *peserta.Test.Aktif == 0 {
+			continue
+		}
+
+		testData := map[string]interface{}{
+			"test_id":           peserta.TestID,
+			"judul":             peserta.Test.Judul,
+			"deskripsi":         peserta.Test.Deskripsi,
+			"type_test":         peserta.Test.TypeTest,
+			"durasi_menit":      peserta.Test.DurasiMenit,
+			"deadline":          peserta.Test.Deadline,
+			"mapel":             peserta.Test.Mapel.NmMapel,
+			"guru":              peserta.Test.Guru.GuruNama,
+			"status":            peserta.Status,
+			"jumlah_soal_tampil": peserta.Test.Jumlah,
+			"random_soal":       peserta.Test.RandomSoal,
+		}
+
+		result = append(result, testData)
+	}
+
+	// Urutkan berdasarkan created_at descending (terbaru dulu)
+	sort.Slice(result, func(i, j int) bool {
+		timeI := result[i]["created_at"].(time.Time)
+		timeJ := result[j]["created_at"].(time.Time)
+		return timeI.After(timeJ)
+	})
+
+	return result, nil
 }
 
 //testreview

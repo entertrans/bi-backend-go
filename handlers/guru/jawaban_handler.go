@@ -205,6 +205,7 @@ func UpdateOverrideNilai(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Nilai akhir berhasil diupdate"})
 }
 
+// handler/guruHandler.go
 func ResetTestSessionHandler(c *gin.Context) {
 	sessionIdStr := c.Param("session_id")
 	sessionId, err := strconv.ParseUint(sessionIdStr, 10, 64)
@@ -216,7 +217,21 @@ func ResetTestSessionHandler(c *gin.Context) {
 		return
 	}
 
-	err = gurucontrollers.ResetTestSession(uint(sessionId))
+	// Ambil data tambahan dari body
+	var requestData struct {
+		TestID   uint   `json:"test_id"`
+		SiswaNIS string `json:"siswa_nis"`
+	}
+
+	if err := c.BindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Data request tidak valid",
+		})
+		return
+	}
+
+	err = gurucontrollers.ResetTestSession(uint(sessionId), requestData.TestID, requestData.SiswaNIS)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

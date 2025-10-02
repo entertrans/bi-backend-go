@@ -23,8 +23,12 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		siswaRoutes.POST("/jawaban/save", siswaHandler.SaveJawabanHandler)
 		siswaRoutes.GET("/test/:test_id/soal", siswaHandler.GetSoalHandler)
 
+		siswaRoutes.GET("/not-started-tests", siswaHandler.GetNotStartedTestsHandler)
+
 		//test review
 	}
+
+
 	
 	kisiKisi := r.Group("siswa/kisikisi")
 	{
@@ -36,6 +40,10 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		kisiKisi.PUT("/:id", siswaHandler.UpdateKisiKisiHandler)
 		kisiKisi.DELETE("/:id", siswaHandler.DeleteKisiKisiHandler)
 	}
+	// testReview := r.Group("siswa/tr")
+	// {
+	// 	testReview.GET("/test/:test_id/session", siswaHandler.GetTestByNisHandler)
+	// }
 	
 	invoice := r.Group("siswa/invoice")
 	{

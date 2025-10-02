@@ -41,6 +41,12 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 			existingSession.EndTime = &endTime
 			existingSession.WaktuSisa = 0
 			config.DB.Save(&existingSession)
+			
+			// Update status peserta menjadi "submitted"
+			config.DB.Model(&models.TO_Peserta{}).
+				Where("test_id = ? AND siswa_nis = ?", testID, nis).
+				Update("status", "submitted")
+				
 			return nil, fmt.Errorf("waktu ujian sudah habis")
 		}
 
@@ -82,27 +88,39 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 		return nil, fmt.Errorf("gagal membuat session: %w", err)
 	}
 
+	// 📝 UPDATE STATUS PESERTA MENJADI "in_progress"
+	result := config.DB.Model(&models.TO_Peserta{}).
+		Where("test_id = ? AND siswa_nis = ?", testID, nis).
+		Update("status", "in_progress")
+		
+	if result.Error != nil {
+		log.Printf("⚠️ Gagal update status peserta: %v", result.Error)
+	} else if result.RowsAffected == 0 {
+		log.Printf("⚠️ Data peserta tidak ditemukan untuk test_id=%d, nis=%s", testID, nis)
+		// Optional: Buat data peserta jika belum ada
+		peserta := models.TO_Peserta{
+			TestID:    testID,
+			SiswaNIS:  nis,
+			Status:    "in_progress",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := config.DB.Create(&peserta).Error; err != nil {
+			log.Printf("⚠️ Gagal membuat data peserta: %v", err)
+		}
+	}
+
 	// 📦 AMBIL SOAL MENGGUNAKAN GetSoalByTestID1
 	soalList, err := GetSoalByTestID1(testID)
 	if err != nil {
 		return nil, fmt.Errorf("gagal mengambil soal: %w", err)
 	}
-	// cek apakah jumlah soal yg dipilih guru mencukupi jumlah tampil
-	// if int(test.Jumlah) > len(soalList) {
-	// 	// pilihan: return error agar guru harus memilih cukup soal
-	// 	// atau bisa lanjut dengan whatever available (ganti behavior di sini sesuai preferensimu)
-	// 	return nil, fmt.Errorf("jumlah soal tampil yang diminta (%d) lebih besar dari soal yang dipilih guru (%d)", test.Jumlah, len(soalList))
-	// }
 
 	// 🎲 ACAK SOAL JIKA DIBUTUHKAN
 	if test.RandomSoal {
 		rand.Seed(time.Now().UnixNano())
 		rand.Shuffle(len(soalList), func(i, j int) { soalList[i], soalList[j] = soalList[j], soalList[i] })
 	}
-	// BATASI sesuai jumlah
-	// if test.Jumlah > 0 && len(soalList) > int(test.Jumlah) {
-	// 	soalList = soalList[:int(test.Jumlah)]
-	// }
 
 	// 💾 SIMPAN URUTAN SOAL FIX KE to_sessionsoal
 	for i, soal := range soalList {
@@ -514,3 +532,5 @@ func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {
 
 	return nil, fmt.Errorf("tipe test tidak dikenali: %s", test.TypeTest)
 }
+
+

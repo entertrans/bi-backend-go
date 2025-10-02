@@ -29,7 +29,7 @@ func getSoalAndKunci(soalID uint, tipeUjian string) (string, float64, string, []
             soal.JawabanBenar, soal.Bobot, soal.TipeSoal, pilihan)
         return soal.JawabanBenar, soal.Bobot, soal.TipeSoal, pilihan, nil
     } else {
-        var soal models.TO_BankSoal
+        var soal models.TO_TestSoal
         err := config.DB.First(&soal, soalID).Error
         if err != nil {
             fmt.Printf("ERROR getSoalAndKunci Test: %v\n", err)

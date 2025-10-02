@@ -689,7 +689,8 @@ func UpdateNilaiAkhir(sessionID int, nilaiAkhir float64) error {
 	return nil
 }
 
-func ResetTestSession(sessionID uint) error {
+// controller/guruController.go
+func ResetTestSession(sessionID uint, testID uint, siswaNIS string) error {
 	db := config.DB
 
 	// Pastikan session ada
@@ -701,21 +702,50 @@ func ResetTestSession(sessionID uint) error {
 		return err
 	}
 
-	// Hapus jawaban final
-	if err := db.Where("session_id = ?", sessionID).Delete(&models.JawabanFinal{}).Error; err != nil {
-		return err
+	// Mulai transaction
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. Hapus jawaban final
+	if err := tx.Where("session_id = ?", sessionID).Delete(&models.JawabanFinal{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("gagal menghapus jawaban final: %w", err)
 	}
 
-	// Hapus session soal
-	if err := db.Where("session_id = ?", sessionID).Delete(&models.TO_SessionSoal{}).Error; err != nil {
-		return err
+	// 2. Hapus session soal
+	if err := tx.Where("session_id = ?", sessionID).Delete(&models.TO_SessionSoal{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("gagal menghapus session soal: %w", err)
 	}
 
-	// Hapus test session
-	if err := db.Where("session_id = ?", sessionID).Delete(&models.TestSession{}).Error; err != nil {
-		return err
+	// 3. Hapus test session
+	if err := tx.Where("session_id = ?", sessionID).Delete(&models.TestSession{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("gagal menghapus test session: %w", err)
 	}
 
+	// 4. Reset status peserta menjadi "not_started"
+	if err := tx.Model(&models.TO_Peserta{}).
+		Where("test_id = ? AND siswa_nis = ?", testID, siswaNIS).
+		Updates(map[string]interface{}{
+			"status":      "not_started",
+			"nilai_akhir": 0,
+			"updated_at":  time.Now(),
+		}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("gagal reset status peserta: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		return fmt.Errorf("gagal commit transaction: %w", err)
+	}
+
+	log.Printf("✅ Test session %d berhasil direset. Status peserta diupdate ke 'not_started'", sessionID)
 	return nil
 }
 

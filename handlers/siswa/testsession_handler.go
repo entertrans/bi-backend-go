@@ -1,19 +1,16 @@
 package siswa
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/entertrans/bi-backend-go/config"
 	siswaControllers "github.com/entertrans/bi-backend-go/controllers/siswa"
 	"github.com/entertrans/bi-backend-go/models"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // POST /siswa/test/start/:test_id
@@ -56,26 +53,26 @@ func GetActiveTestSessionHandler(c *gin.Context) {
 	session, err := siswaControllers.GetActiveTestSession(uint(testID), nis)
 
 	// ✅ PENANGANAN ERROR YANG LEBIH BAIK
-	if err != nil {
-		// Gunakan errors.Is untuk mengecek jenis error
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error":   "Tidak ada session aktif ditemukan",
-				"details": "Siswa belum memulai test atau session sudah disubmit",
-			})
-		} else if strings.Contains(err.Error(), "NIS tidak valid") {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Format NIS tidak valid"})
-		} else if strings.Contains(err.Error(), "data test tidak ditemukan") {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Data test tidak lengkap"})
-		} else {
-			// Log error untuk debugging
-			log.Printf("Internal Server Error in GetActiveTestSession: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Terjadi kesalahan internal server",
-			})
-		}
-		return
-	}
+	// if err != nil {
+	// 	// Gunakan errors.Is untuk mengecek jenis error
+	// 	if errors.Is(err, gorm.ErrRecordNotFound) {
+	// 		c.JSON(http.StatusNotFound, gin.H{
+	// 			"error":   "Tidak ada session aktif ditemukan",
+	// 			"details": "Siswa belum memulai test atau session sudah disubmit",
+	// 		})
+	// 	} else if strings.Contains(err.Error(), "NIS tidak valid") {
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": "Format NIS tidak valid"})
+	// 	} else if strings.Contains(err.Error(), "data test tidak ditemukan") {
+	// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Data test tidak lengkap"})
+	// 	} else {
+	// 		// Log error untuk debugging
+	// 		log.Printf("Internal Server Error in GetActiveTestSession: %v", err)
+	// 		c.JSON(http.StatusInternalServerError, gin.H{
+	// 			"error": "Terjadi kesalahan internal server",
+	// 		})
+	// 	}
+	// 	return
+	// }
 
 	c.JSON(http.StatusOK, session)
 }
@@ -241,5 +238,29 @@ func SubmitTugasHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":      "Tugas berhasil dikumpulkan (onqueue)",
 		"submitted_at": time.Now(),
+	})
+}
+
+// handler/siswaHandler.go
+func GetNotStartedTestsHandler(c *gin.Context) {
+	nis := c.Query("nis")
+	if nis == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "NIS diperlukan"})
+		return
+	}
+
+	tests, err := siswaControllers.GetNotStartedTests(nis)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Gagal mengambil data test",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Berhasil mengambil test/tugas yang belum dikerjakan",
+		"data":    tests,
+		"total":   len(tests),
 	})
 }

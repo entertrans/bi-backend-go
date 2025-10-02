@@ -79,6 +79,7 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		SiswaJawab.GET("/session/:session_id/:jenis/jawaban", guruhandlers.GetJawabanBySession)
 		SiswaJawab.PUT("/session/:session_id/jawaban", guruhandlers.UpdateJawabanFinal)
 		SiswaJawab.PUT("/session/:session_id/nilai-akhir", guruhandlers.UpdateOverrideNilai)
+		// routes/siswaJawabRoutes.go
 		SiswaJawab.DELETE("/test/reset/:session_id", guruhandlers.ResetTestSessionHandler)
 		// SiswaJawab.GET("/session/:test_id/jawaban", guruhandlers.GetSoalPenilaianHandler)
 		// SiswaJawab.GET("/session/:test_id/jawaban", guruhandlers.GetSoalPenilaianHandler)
