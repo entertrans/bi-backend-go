@@ -77,6 +77,7 @@ func GetSoalByTestID(testID uint) ([]models.TO_TestSoal, error) {
 
 	return soals, err
 }
+
 // controller/siswaController.go
 func GetNotStartedTests(nis string) ([]map[string]interface{}, error) {
 	var pesertaList []models.TO_Peserta
@@ -103,17 +104,18 @@ func GetNotStartedTests(nis string) ([]map[string]interface{}, error) {
 		}
 
 		testData := map[string]interface{}{
-			"test_id":           peserta.TestID,
-			"judul":             peserta.Test.Judul,
-			"deskripsi":         peserta.Test.Deskripsi,
-			"type_test":         peserta.Test.TypeTest,
-			"durasi_menit":      peserta.Test.DurasiMenit,
-			"deadline":          peserta.Test.Deadline,
-			"mapel":             peserta.Test.Mapel.NmMapel,
-			"guru":              peserta.Test.Guru.GuruNama,
-			"status":            peserta.Status,
+			"test_id":            peserta.TestID,
+			"judul":              peserta.Test.Judul,
+			"deskripsi":          peserta.Test.Deskripsi,
+			"type_test":          peserta.Test.TypeTest,
+			"durasi_menit":       peserta.Test.DurasiMenit,
+			"deadline":           peserta.Test.Deadline,
+			"mapel":              peserta.Test.Mapel.NmMapel,
+			"guru":               peserta.Test.Guru.GuruNama,
+			"status":             peserta.Status,
 			"jumlah_soal_tampil": peserta.Test.Jumlah,
-			"random_soal":       peserta.Test.RandomSoal,
+			"random_soal":        peserta.Test.RandomSoal,
+			"created_at":         peserta.Test.CreatedAt, // <-- tambahkan ini
 		}
 
 		result = append(result, testData)
