@@ -22,12 +22,25 @@ func GetJawabanBySiswaHandler(c *gin.Context) {
 		return
 	}
 
+	// Ambil kelas universal dari hasil pertama (kalau ada)
+	var kelasUniversal string
+	if len(results) > 0 {
+		kelasUniversal = results[0].Kelas
+	}
+
+	// Hapus field Kelas di tiap item
+	for i := range results {
+		results[i].Kelas = ""
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"siswa_nis": siswaNIS,
-		"results":   results,
-		"count":     len(results),
+		"kelas":      kelasUniversal,
+		"results":    results,
+		"count":      len(results),
 	})
 }
+
 
 func GetDetailJawabanHandler(c *gin.Context) {
 	sessionIDStr := c.Param("session_id")

@@ -48,6 +48,7 @@ type TO_Peserta struct {
 	PesertaID  uint      `json:"peserta_id" gorm:"column:peserta_id;primaryKey;autoIncrement"`
 	TestID     uint      `json:"test_id" gorm:"column:test_id"`
 	SiswaNIS   string    `json:"siswa_nis" gorm:"column:siswa_nis"`
+	KelasID    *uint      `gorm:"column:kelas_id"` // Tambahan untuk snapshot kelas
 	Status     string    `json:"status" gorm:"column:status;default:not_started"`
 	ExtraTime  int       `json:"extra_time" gorm:"column:extra_time"`
 	NilaiAkhir float64   `json:"nilai_akhir" gorm:"column:nilai_akhir"`
@@ -57,12 +58,12 @@ type TO_Peserta struct {
 	// Relasi
 	Test  TO_Test `json:"test" gorm:"foreignKey:TestID;references:TestID"`
 	Siswa Siswa   `json:"siswa" gorm:"foreignKey:SiswaNIS;references:SiswaNIS"`
+	Kelas Kelas   `json:"kelas" gorm:"foreignKey:KelasID;references:KelasId"` // Relasi ke Kelas
 }
 
 func (TO_Peserta) TableName() string {
 	return "to_peserta"
 }
-
 type TO_JawabanFinal struct {
 	FinalID      uint           `gorm:"primaryKey;column:final_id"`
 	SessionID    uint           `gorm:"not null;index;column:session_id"`

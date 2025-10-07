@@ -16,6 +16,7 @@ type TestJawabanResult struct {
 	TestID      uint           `json:"test_id"`
 	Jenis       string         `json:"jenis"`
 	Mapel       string         `json:"mapel"`
+	Kelas       string            `json:"kelas"` // Pastikan ada field ini
 	Judul       string         `json:"judul"`
 	Nilai       *float64       `json:"nilai"`
 	Tanggal     *time.Time     `json:"tanggal"`
@@ -31,25 +32,19 @@ type TestJawabanResult struct {
 func GetJawabanBySiswaNIS(siswaNIS string) ([]TestJawabanResult, error) {
 	db := config.DB
 
-	// 1. Ambil data siswa
+	// 1. Ambil data siswa (hanya untuk validasi)
 	var siswa models.Siswa
-	if err := db.Where("siswa_nis = ?", siswaNIS).
-		Preload("Kelas").
-		First(&siswa).Error; err != nil {
+	if err := db.Where("siswa_nis = ?", siswaNIS).First(&siswa).Error; err != nil {
 		return nil, fmt.Errorf("siswa tidak ditemukan")
-	}
-
-	if siswa.SiswaKelasID == nil || siswa.Kelas.KelasId == 0 {
-		return nil, fmt.Errorf("siswa belum memiliki kelas atau data kelas tidak valid")
 	}
 
 	results := []TestJawabanResult{}
 
 	// ---------------------------
-	// 2A. Ambil test UB by kelas
+	// 2A. Ambil test UB by kelas dari to_peserta/to_testsession
 	// ---------------------------
 	var testsUB []models.TO_Test
-	if err := db.Where("kelas_id = ? AND type_test = ?", *siswa.SiswaKelasID, "ub").
+	if err := db.Where("type_test = ?", "ub").
 		Preload("Mapel").
 		Find(&testsUB).Error; err != nil {
 		return nil, err
@@ -68,6 +63,7 @@ func GetJawabanBySiswaNIS(siswaNIS string) ([]TestJawabanResult, error) {
 	var pesertaList []models.TO_Peserta
 	if err := db.Where("siswa_nis = ?", siswaNIS).
 		Preload("Test.Mapel").
+		Preload("Kelas"). // Preload kelas dari to_peserta
 		Find(&pesertaList).Error; err != nil {
 		return nil, err
 	}
@@ -86,7 +82,26 @@ func GetJawabanBySiswaNIS(siswaNIS string) ([]TestJawabanResult, error) {
 func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJawabanResult, error) {
 	var session models.TestSession
 	err := db.Where("test_id = ? AND siswa_nis = ?", test.TestID, siswaNIS).
+		Preload("Kelas"). // Preload kelas dari session
 		First(&session).Error
+
+	// ===============================
+	// Ambil kelas dari session atau peserta
+	// ===============================
+	var kelasNama string
+	
+	// Priority 1: Ambil dari session (kelas saat mengerjakan)
+	if session.SessionID != 0 && session.Kelas.KelasId != 0 {
+		kelasNama = session.Kelas.KelasNama
+	} else {
+		// Priority 2: Ambil dari peserta (fallback)
+		var peserta models.TO_Peserta
+		if err := db.Where("test_id = ? AND siswa_nis = ?", test.TestID, siswaNIS).
+			Preload("Kelas").
+			First(&peserta).Error; err == nil && peserta.Kelas.KelasId != 0 {
+			kelasNama = peserta.Kelas.KelasNama
+		}
+	}
 
 	// ===============================
 	// Hitung rangkaian soal per tipe
@@ -101,7 +116,7 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 		Pluck("tipe_soal", &tipeList)
 
 	// 2. kalau kosong → ambil dari to_sessionsoal join banksoal (untuk ub)
-	if len(tipeList) == 0 {
+	if len(tipeList) == 0 && session.SessionID != 0 {
 		db.Table("to_sessionsoal").
 			Select("to_banksoal.tipe_soal").
 			Joins("JOIN to_banksoal ON to_sessionsoal.soal_id = to_banksoal.soal_id").
@@ -124,11 +139,13 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 		Jenis:       test.TypeTest,
 		Mapel:       test.Mapel.NmMapel,
 		Judul:       test.Judul,
+		Kelas:       kelasNama, // ✅ Tambahkan kelas ke result
 		Rangkaian:   rangkaian,
 		ButuhReview: butuhReview,
 		Reviewed:    false,
 		Submited:    false,
 		SessionID:   nil, // ✅ Default nil
+		Nilai:       nil, // ✅ Default nil
 	}
 
 	// ❌ belum ada session → belum dikerjakan
@@ -138,19 +155,42 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 	}
 
 	// ✅ Ada session - SET SESSION ID DI SINI
-	res.SessionID = &session.SessionID // ✅ TAMBAHKAN INI
-	res.Nilai = &session.NilaiAkhir
+	res.SessionID = &session.SessionID
 	res.Tanggal = &session.StartTime
 
-	// cek apakah sudah ada jawaban final
-	var countJawaban int64
-	db.Table("to_jawabanfinal").
-		Where("session_id = ?", session.SessionID).
-		Count(&countJawaban)
-	if countJawaban > 0 {
-		res.Submited = true
+	// Set nilai hanya jika ada
+	if session.NilaiAkhir > 0 || session.NilaiAkhir == 0 { // termasuk nilai 0
+		nilai := session.NilaiAkhir
+		res.Nilai = &nilai
 	}
 
+	// ===============================
+	// LOGIKA SUBMITED YANG DIPERBAIKI
+	// ===============================
+	
+	// Cek apakah sudah submit dengan beberapa cara:
+	
+	// 1. Cek di to_jawabanfinal (untuk soal yang menggunakan jawaban final)
+	var countJawabanFinal int64
+	db.Table("to_jawabanfinal").
+		Where("session_id = ?", session.SessionID).
+		Count(&countJawabanFinal)
+	
+	// 2. Cek apakah session sudah completed (berdasarkan EndTime)
+	sessionCompleted := session.EndTime != nil
+	
+	// 3. Cek apakah sudah ada nilai (termasuk nilai 0)
+	hasNilai := session.NilaiAkhir >= 0 // termasuk 0
+
+	// Submit dianggap true jika:
+	// - Ada jawaban final ATAU
+	// - Session sudah completed (ada EndTime) ATAU  
+	// - Sudah ada nilai (termasuk nilai 0)
+	res.Submited = countJawabanFinal > 0 || sessionCompleted || hasNilai
+
+	// ===============================
+	// LOGIKA STATUS DAN REVIEW
+	// ===============================
 	if butuhReview {
 		// hitung soal subjektif di jawabanfinal
 		var totalSubjektif, countBelum int64
@@ -160,14 +200,14 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 				session.SessionID, []string{"uraian", "isian_singkat"}).
 			Count(&totalSubjektif)
 
-		db.Table("to_jawabanfinal").
-			Joins("JOIN to_banksoal ON to_jawabanfinal.soal_id = to_banksoal.soal_id").
-			Where("to_jawabanfinal.session_id = ? AND to_banksoal.tipe_soal IN (?)",
-				session.SessionID, []string{"uraian", "isian_singkat"}).
-			Where("to_jawabanfinal.skor_uraian IS NULL").
-			Count(&countBelum)
-
 		if totalSubjektif > 0 {
+			db.Table("to_jawabanfinal").
+				Joins("JOIN to_banksoal ON to_jawabanfinal.soal_id = to_banksoal.soal_id").
+				Where("to_jawabanfinal.session_id = ? AND to_banksoal.tipe_soal IN (?)",
+					session.SessionID, []string{"uraian", "isian_singkat"}).
+				Where("to_jawabanfinal.skor_uraian IS NULL").
+				Count(&countBelum)
+
 			if countBelum > 0 {
 				res.Status = "⏳ menunggu review"
 				res.Reviewed = false
@@ -175,16 +215,25 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 				res.Status = "✅ sudah direview"
 				res.Reviewed = true
 			}
+		} else {
+			// Untuk test yang butuh review tapi tidak ada soal subjektif di jawabanfinal
+			if res.Submited {
+				res.Status = "✅ sudah dikerjakan"
+			} else {
+				res.Status = "❌ belum dikerjakan"
+			}
 		}
 	} else {
 		if res.Submited {
-			res.Status = "✅ otomatis dinilai"
+			res.Status = "✅ sudah dikerjakan"
 			res.Reviewed = true
+		} else {
+			res.Status = "❌ belum dikerjakan"
 		}
 	}
 
-	log.Printf("[DEBUG] test_id=%d siswa_nis=%s session_id=%v rangkaian=%v status=%s",
-		res.TestID, siswaNIS, res.SessionID, res.Rangkaian, res.Status)
+	log.Printf("[DEBUG] test_id=%d siswa_nis=%s session_id=%v kelas=%s submited=%t nilai=%v status=%s",
+		res.TestID, siswaNIS, res.SessionID, res.Kelas, res.Submited, res.Nilai, res.Status)
 
 	return res, nil
 }
