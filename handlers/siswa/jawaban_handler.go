@@ -16,7 +16,7 @@ func SaveJawabanHandler(c *gin.Context) {
 		SoalID       uint    `json:"soal_id"`
 		JawabanSiswa string  `json:"jawaban_siswa"`
 		SkorObjektif float64 `json:"skor_objektif"`
-		TipeSoal     string  `json:"tipe_soal"`
+		TipeUjian    string  `json:"tipe_ujian"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -29,8 +29,9 @@ func SaveJawabanHandler(c *gin.Context) {
 		req.SoalID,
 		req.JawabanSiswa,
 		req.SkorObjektif,
-		req.TipeSoal,
+		req.TipeUjian, // ✅
 	)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal simpan jawaban"})
 		return

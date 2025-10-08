@@ -16,7 +16,7 @@ type TestJawabanResult struct {
 	TestID      uint           `json:"test_id"`
 	Jenis       string         `json:"jenis"`
 	Mapel       string         `json:"mapel"`
-	Kelas       string            `json:"kelas"` // Pastikan ada field ini
+	Kelas       string         `json:"kelas"` // Pastikan ada field ini
 	Judul       string         `json:"judul"`
 	Nilai       *float64       `json:"nilai"`
 	Tanggal     *time.Time     `json:"tanggal"`
@@ -89,7 +89,7 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 	// Ambil kelas dari session atau peserta
 	// ===============================
 	var kelasNama string
-	
+
 	// Priority 1: Ambil dari session (kelas saat mengerjakan)
 	if session.SessionID != 0 && session.Kelas.KelasId != 0 {
 		kelasNama = session.Kelas.KelasNama
@@ -167,24 +167,24 @@ func buildTestResult(db *gorm.DB, test models.TO_Test, siswaNIS string) (TestJaw
 	// ===============================
 	// LOGIKA SUBMITED YANG DIPERBAIKI
 	// ===============================
-	
+
 	// Cek apakah sudah submit dengan beberapa cara:
-	
+
 	// 1. Cek di to_jawabanfinal (untuk soal yang menggunakan jawaban final)
 	var countJawabanFinal int64
 	db.Table("to_jawabanfinal").
 		Where("session_id = ?", session.SessionID).
 		Count(&countJawabanFinal)
-	
+
 	// 2. Cek apakah session sudah completed (berdasarkan EndTime)
 	sessionCompleted := session.EndTime != nil
-	
+
 	// 3. Cek apakah sudah ada nilai (termasuk nilai 0)
 	hasNilai := session.NilaiAkhir >= 0 // termasuk 0
 
 	// Submit dianggap true jika:
 	// - Ada jawaban final ATAU
-	// - Session sudah completed (ada EndTime) ATAU  
+	// - Session sudah completed (ada EndTime) ATAU
 	// - Sudah ada nilai (termasuk nilai 0)
 	res.Submited = countJawabanFinal > 0 || sessionCompleted || hasNilai
 
@@ -403,6 +403,7 @@ func GetSiswaDetailForGuru(siswaNIS string) (map[string]interface{}, error) {
 
 	return result, nil
 }
+
 // func FetchJawabanBySession(sessionID int) (map[string]interface{}, error) {
 // 	// --- 1. Ambil data session (tambah nilai_akhir)
 // 	var session struct {
@@ -518,48 +519,49 @@ func GetSiswaDetailForGuru(siswaNIS string) (map[string]interface{}, error) {
 // }
 
 func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{}, error) {
-    // --- 1. Ambil data session
-    var session struct {
-        SessionID  int     `gorm:"column:session_id"`
-        TestID     int     `gorm:"column:test_id"`
-        SiswaNIS   string  `gorm:"column:siswa_nis"`
-        NilaiAkhir float64 `gorm:"column:nilai_akhir"`
-    }
-    if err := config.DB.Table("to_testsession").
-        Select("session_id, test_id, siswa_nis, nilai_akhir").
-        Where("session_id = ?", sessionID).
-        Take(&session).Error; err != nil {
-        return nil, err
-    }
+	// --- 1. Ambil data session
+	var session struct {
+		SessionID  int     `gorm:"column:session_id"`
+		TestID     int     `gorm:"column:test_id"`
+		SiswaNIS   string  `gorm:"column:siswa_nis"`
+		NilaiAkhir float64 `gorm:"column:nilai_akhir"`
+	}
+	if err := config.DB.Table("to_testsession").
+		Select("session_id, test_id, siswa_nis, nilai_akhir").
+		Where("session_id = ?", sessionID).
+		Take(&session).Error; err != nil {
+		return nil, err
+	}
 
-    // --- 2. Ambil data test
-    var test struct {
-        Judul string `gorm:"column:judul"`
-        Mapel string `gorm:"column:mapel"`
-    }
-    config.DB.Table("to_test t").
-        Select("t.judul, m.nm_mapel AS mapel").
-        Joins("LEFT JOIN tbl_mapel m ON m.kd_mapel = t.mapel_id").
-        Where("t.test_id = ?", session.TestID).
-        Take(&test)
+	// --- 2. Ambil data test
+	var test struct {
+		Judul string `gorm:"column:judul"`
+		Mapel string `gorm:"column:mapel"`
+	}
+	config.DB.Table("to_test t").
+		Select("t.judul, m.nm_mapel AS mapel").
+		Joins("LEFT JOIN tbl_mapel m ON m.kd_mapel = t.mapel_id").
+		Where("t.test_id = ?", session.TestID).
+		Take(&test)
 
-    // --- 3. Ambil data siswa
-    var siswa struct {
-        NIS  string `gorm:"column:nis"`
-        Nama string `gorm:"column:nama"`
-    }
-    config.DB.Table("tbl_siswa").
-        Select("siswa_nis AS nis, siswa_nama AS nama").
-        Where("siswa_nis = ?", session.SiswaNIS).
-        Take(&siswa)
+	// --- 3. Ambil data siswa
+	var siswa struct {
+		NIS  string `gorm:"column:nis"`
+		Nama string `gorm:"column:nama"`
+	}
+	config.DB.Table("tbl_siswa").
+		Select("siswa_nis AS nis, siswa_nama AS nama").
+		Where("siswa_nis = ?", session.SiswaNIS).
+		Take(&siswa)
 
-    // --- 4. Ambil jawaban sesuai jenis
-    var jawaban []models.JawabanResponse
+	// --- 4. Ambil jawaban sesuai jenis
+	var jawaban []models.JawabanResponse
 
-    if strings.ToUpper(jenis) == "ub" {
-        // kalau jenis UB → ambil dari banksoal
-        config.DB.Table("to_jawabanfinal j").
-            Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
+	if strings.ToUpper(jenis) == "ub" {
+		// log.Printf("masuk area sini")
+		// kalau jenis UB → ambil dari banksoal
+		config.DB.Table("to_jawabanfinal j").
+			Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
                 CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
                 CAST(b.jawaban_benar AS CHAR) AS jawaban_benar,
                 CAST(b.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
@@ -568,14 +570,15 @@ func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{},
                 l.nama_file AS lampiran_nama_file,
                 l.tipe_file AS lampiran_tipe_file,
                 l.path_file AS lampiran_path_file`).
-            Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
-            Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
-            Where("j.session_id = ?", sessionID).
-            Scan(&jawaban)
-    } else {
-        // selain UB → ambil dari testsoal
-        config.DB.Table("to_jawabanfinal j").
-            Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
+			Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
+			Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
+			Where("j.session_id = ?", sessionID).
+			Scan(&jawaban)
+	} else {
+		log.Printf("masuk area sini")
+		// selain UB → ambil dari testsoal
+		config.DB.Table("to_jawabanfinal j").
+			Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
                 CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
                 CAST(t.jawaban_benar AS CHAR) AS jawaban_benar,
                 j.skor_objektif, j.skor_uraian,
@@ -583,30 +586,29 @@ func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{},
                 l.nama_file AS lampiran_nama_file,
                 l.tipe_file AS lampiran_tipe_file,
                 l.path_file AS lampiran_path_file`).
-            Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
-            Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
-            Where("j.session_id = ?", sessionID).
-            Scan(&jawaban)
-    }
+			Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
+			Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
+			Where("j.session_id = ?", sessionID).
+			Scan(&jawaban)
+	}
 
-    // --- 5. Response final
-    response := map[string]interface{}{
-        "session_id": session.SessionID,
-        "test": map[string]interface{}{
-            "judul": test.Judul,
-            "mapel": test.Mapel,
-            "nilai": session.NilaiAkhir,
-        },
-        "siswa": map[string]interface{}{
-            "nis":  siswa.NIS,
-            "nama": siswa.Nama,
-        },
-        "jawaban": jawaban,
-    }
+	// --- 5. Response final
+	response := map[string]interface{}{
+		"session_id": session.SessionID,
+		"test": map[string]interface{}{
+			"judul": test.Judul,
+			"mapel": test.Mapel,
+			"nilai": session.NilaiAkhir,
+		},
+		"siswa": map[string]interface{}{
+			"nis":  siswa.NIS,
+			"nama": siswa.Nama,
+		},
+		"jawaban": jawaban,
+	}
 
-    return response, nil
+	return response, nil
 }
-
 
 func UpdateNilaiJawaban(sessionID int, perubahan []struct {
 	SessionID int     `json:"session_id"`

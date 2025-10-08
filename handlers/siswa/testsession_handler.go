@@ -27,7 +27,17 @@ func StartTestHandler(c *gin.Context) {
 		return
 	}
 
-	session, err := siswaControllers.StartTestSession(uint(testID), nis)
+	kelasIDStr := c.Query("kelas_id")
+	var kelasID uint
+	if kelasIDStr != "" {
+		parsed, err := strconv.Atoi(kelasIDStr)
+		if err == nil {
+			kelasID = uint(parsed)
+		}
+	}
+
+	session, err := siswaControllers.StartTestSession(uint(testID), nis, kelasID)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memulai test: " + err.Error()})
 		return

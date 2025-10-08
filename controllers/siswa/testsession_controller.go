@@ -13,7 +13,7 @@ import (
 )
 
 // Mulai test baru atau lanjutkan session yang ada - DIPERBAIKI
-func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
+func StartTestSession(testID uint, nis string, kelasID uint) (*models.TestSession, error) {
 	// Convert nis string to int
 	nisInt, err := strconv.Atoi(nis)
 	if err != nil {
@@ -41,12 +41,12 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 			existingSession.EndTime = &endTime
 			existingSession.WaktuSisa = 0
 			config.DB.Save(&existingSession)
-			
+
 			// Update status peserta menjadi "submitted"
 			config.DB.Model(&models.TO_Peserta{}).
 				Where("test_id = ? AND siswa_nis = ?", testID, nis).
 				Update("status", "submitted")
-				
+
 			return nil, fmt.Errorf("waktu ujian sudah habis")
 		}
 
@@ -76,6 +76,7 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 	session := models.TestSession{
 		TestID:     testID,
 		SiswaNIS:   nisInt,
+		KelasID:    kelasID, // ✅ tambahkan kelas snapshot di sini
 		StartTime:  startTime,
 		EndTime:    &endTime,
 		WaktuSisa:  test.DurasiMenit * 60,
@@ -92,7 +93,7 @@ func StartTestSession(testID uint, nis string) (*models.TestSession, error) {
 	result := config.DB.Model(&models.TO_Peserta{}).
 		Where("test_id = ? AND siswa_nis = ?", testID, nis).
 		Update("status", "in_progress")
-		
+
 	if result.Error != nil {
 		log.Printf("⚠️ Gagal update status peserta: %v", result.Error)
 	} else if result.RowsAffected == 0 {
@@ -532,5 +533,3 @@ func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {
 
 	return nil, fmt.Errorf("tipe test tidak dikenali: %s", test.TypeTest)
 }
-
-

@@ -10,7 +10,7 @@ type TestSession struct {
 	SessionID  uint       `gorm:"primaryKey;column:session_id"`
 	TestID     uint       `gorm:"not null;column:test_id"`
 	SiswaNIS   int        `gorm:"not null;column:siswa_nis"`
-	KelasID    *uint      `gorm:"column:kelas_id"` // Tambahan untuk snapshot kelas
+	KelasID    uint       `json:"kelas_id" gorm:"column:kelas_id"` // Tambahan untuk snapshot kelas
 	StartTime  time.Time  `gorm:"not null;column:start_time"`
 	EndTime    *time.Time `gorm:"column:end_time"`
 	WaktuSisa  int        `gorm:"column:waktu_sisa"`

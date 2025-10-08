@@ -28,8 +28,6 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		//test review
 	}
 
-
-	
 	kisiKisi := r.Group("siswa/kisikisi")
 	{
 		kisiKisi.GET("/", siswaHandler.GetAllKisiKisiHandler)
@@ -40,11 +38,7 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		kisiKisi.PUT("/:id", siswaHandler.UpdateKisiKisiHandler)
 		kisiKisi.DELETE("/:id", siswaHandler.DeleteKisiKisiHandler)
 	}
-	// testReview := r.Group("siswa/tr")
-	// {
-	// 	testReview.GET("/test/:test_id/session", siswaHandler.GetTestByNisHandler)
-	// }
-	
+
 	invoice := r.Group("siswa/invoice")
 	{
 		// List semua invoice siswa
@@ -54,7 +48,7 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		invoice.GET("/detail/:nis", siswaHandler.InvoiceDetailByNISHandler)
 		invoice.GET("/:nis/invoice/unpaid-latest", siswaHandler.LatestUnpaidInvoiceHandler)
 	}
-	
+
 	online := r.Group("siswa/online")
 	{
 		online.GET("/", siswaHandler.GetAllOnlineClassHandler)
