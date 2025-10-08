@@ -10,6 +10,7 @@ import (
 
 	"github.com/entertrans/bi-backend-go/config"
 	"github.com/entertrans/bi-backend-go/models"
+	"gorm.io/gorm"
 )
 
 // Mulai test baru atau lanjutkan session yang ada - DIPERBAIKI
@@ -450,6 +451,106 @@ func SubmitTugasSession(sessionID uint) error {
 		Where("session_id = ?", sessionID).
 		Update("status", "onqueue").Error
 }
+
+func SubmitSession(sessionID uint, tipeUjian string) error {
+    db := config.DB
+
+    // Tentukan join condition dan table yang benar
+    var query *gorm.DB
+    
+    if tipeUjian == "ub" {
+        // Untuk UB: join dengan to_banksoal
+        query = db.Table("to_jawabanfinal jf").
+            Select("bs.tipe_soal, bs.bobot, jf.skor_objektif, jf.skor_uraian").
+            Joins("JOIN to_banksoal bs ON jf.soal_id = bs.soal_id").
+            Where("jf.session_id = ?", sessionID)
+    } else {
+        // Untuk Non-UB: join dengan to_testsoal, tapi perhatikan kolomnya!
+        query = db.Table("to_jawabanfinal jf").
+            Select("bs.tipe_soal, bs.bobot, jf.skor_objektif, jf.skor_uraian").
+            Joins("JOIN to_testsoal bs ON jf.soal_id = bs.testsoal_id"). // PASTIKAN INI!
+            Where("jf.session_id = ?", sessionID)
+    }
+
+    tx := db.Begin()
+    if tx.Error != nil {
+        return tx.Error
+    }
+
+    // Ambil data jawaban
+    var jawabanDetails []struct {
+        TipeSoal     string
+        Bobot        float64
+        SkorObjektif float64
+        SkorUraian   *float64
+    }
+
+    err := query.Scan(&jawabanDetails).Error
+    if err != nil {
+        tx.Rollback()
+        log.Printf("❌ Error mengambil jawaban: %v", err)
+        return err
+    }
+
+    log.Printf("🔍 DEBUG SubmitSession: Found %d jawaban details for session %d", len(jawabanDetails), sessionID)
+    
+    for i, jd := range jawabanDetails {
+        log.Printf("🔍 DEBUG Jawaban %d: Tipe=%s, Bobot=%.2f, SkorObj=%.2f, SkorUraian=%v", 
+            i+1, jd.TipeSoal, jd.Bobot, jd.SkorObjektif, jd.SkorUraian)
+    }
+
+    // Hitung nilai
+    totalSkorSiswa, totalSkorMaksimal, butuhReview := 0.0, 0.0, false
+
+    for _, jd := range jawabanDetails {
+        totalSkorMaksimal += jd.Bobot
+        
+        skorSoal := jd.SkorObjektif
+        if jd.TipeSoal == "uraian" || jd.TipeSoal == "isian_singkat" {
+            if jd.SkorUraian != nil {
+                skorSoal = *jd.SkorUraian
+            } else {
+                skorSoal, butuhReview = 0, true
+            }
+        }
+        
+        totalSkorSiswa += skorSoal
+    }
+
+    log.Printf("🔍 DEBUG Perhitungan: TotalSiswa=%.2f, TotalMaksimal=%.2f, ButuhReview=%t", 
+        totalSkorSiswa, totalSkorMaksimal, butuhReview)
+
+    // Update session
+    nilaiAkhir := 0.0
+    if totalSkorMaksimal > 0 {
+        nilaiAkhir = (totalSkorSiswa / totalSkorMaksimal) * 100
+    }
+
+    status := "submitted"
+    if butuhReview {
+        status = "onqueue"
+    }
+
+    err = tx.Model(&models.TestSession{}).
+        Where("session_id = ?", sessionID).
+        Updates(map[string]interface{}{
+            "end_time":    time.Now(),
+            "status":      status,
+            "nilai_akhir": nilaiAkhir,
+            "updated_at":  time.Now(),
+        }).Error
+
+    if err != nil {
+        tx.Rollback()
+        return err
+    }
+
+    log.Printf("✅ Session %d submitted: Nilai=%.2f, Status=%s", sessionID, nilaiAkhir, status)
+
+    return tx.Commit().Error
+}
+
+
 
 // GET /siswa/test/:test_id/soal
 func GetSoalByTestID1(testID uint) ([]models.TO_BankSoal, error) {

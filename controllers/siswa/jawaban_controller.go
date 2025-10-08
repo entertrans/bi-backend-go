@@ -55,16 +55,16 @@ func SaveJawabanFinal(sessionID uint, soalID uint, jawaban string, _ float64, ti
 	// 1. Ambil kunci, bobot soal, dan pilihan jawaban
 	jawabanBenar, bobot, tipeSoal, pilihanJawaban, err := getSoalAndKunci(soalID, tipeUjian)
 	if err != nil {
-		fmt.Printf("ERROR SaveJawabanFinal getSoalAndKunci: %v\n", err)
+		// fmt.Printf("ERROR SaveJawabanFinal getSoalAndKunci: %v\n", err)
 		return err
 	}
 
-	fmt.Printf("DEBUG SaveJawabanFinal: jawabanBenar=%s, bobot=%f, tipeSoal=%s, pilihanJawaban=%v\n",
-		jawabanBenar, bobot, tipeSoal, pilihanJawaban)
+	// fmt.Printf("DEBUG SaveJawabanFinal: jawabanBenar=%s, bobot=%f, tipeSoal=%s, pilihanJawaban=%v\n",
+		// jawabanBenar, bobot, tipeSoal, pilihanJawaban)
 
 	// 2. Hitung skor objektif dengan pilihan jawaban
 	skorObjektif := hitungSkorObjektif(jawaban, jawabanBenar, tipeSoal, bobot, pilihanJawaban)
-	fmt.Printf("DEBUG SaveJawabanFinal: skorObjektif=%f\n", skorObjektif)
+	// fmt.Printf("DEBUG SaveJawabanFinal: skorObjektif=%f\n", skorObjektif)
 
 	// 3. Simpan atau update jawaban final
 	var jawabanFinal models.JawabanFinal
@@ -72,19 +72,19 @@ func SaveJawabanFinal(sessionID uint, soalID uint, jawaban string, _ float64, ti
 		First(&jawabanFinal).Error
 
 	if err == nil {
-		fmt.Printf("DEBUG SaveJawabanFinal: Update existing record\n")
+		// fmt.Printf("DEBUG SaveJawabanFinal: Update existing record\n")
 		jawabanFinal.JawabanSiswa = datatypes.JSON([]byte(jawaban))
 		jawabanFinal.SkorObjektif = skorObjektif
 		err = config.DB.Save(&jawabanFinal).Error
-		if err != nil {
-			fmt.Printf("ERROR SaveJawabanFinal update: %v\n", err)
-		} else {
-			fmt.Printf("DEBUG SaveJawabanFinal: Update successful\n")
-		}
+		// if err != nil {
+		// 	fmt.Printf("ERROR SaveJawabanFinal update: %v\n", err)
+		// } else {
+		// 	fmt.Printf("DEBUG SaveJawabanFinal: Update successful\n")
+		// }
 		return err
 	}
 
-	fmt.Printf("DEBUG SaveJawabanFinal: Create new record\n")
+	// fmt.Printf("DEBUG SaveJawabanFinal: Create new record\n")
 	newJawaban := models.JawabanFinal{
 		SessionID:    sessionID,
 		SoalID:       soalID,
@@ -92,17 +92,17 @@ func SaveJawabanFinal(sessionID uint, soalID uint, jawaban string, _ float64, ti
 		SkorObjektif: skorObjektif,
 	}
 	err = config.DB.Create(&newJawaban).Error
-	if err != nil {
-		fmt.Printf("ERROR SaveJawabanFinal create: %v\n", err)
-	} else {
-		fmt.Printf("DEBUG SaveJawabanFinal: Create successful\n")
-	}
+	// if err != nil {
+	// 	fmt.Printf("ERROR SaveJawabanFinal create: %v\n", err)
+	// } else {
+	// 	fmt.Printf("DEBUG SaveJawabanFinal: Create successful\n")
+	// }
 	return err
 }
 
 func hitungSkorObjektif(jawabanSiswaStr string, jawabanBenarStr string, tipeSoal string, bobot float64, pilihanJawaban []string) float64 {
-	fmt.Printf("DEBUG hitungSkorObjektif: jawabanSiswaStr=%s, jawabanBenarStr=%s, tipeSoal=%s, bobot=%f, pilihanJawaban=%v\n",
-		jawabanSiswaStr, jawabanBenarStr, tipeSoal, bobot, pilihanJawaban)
+	// fmt.Printf("DEBUG hitungSkorObjektif: jawabanSiswaStr=%s, jawabanBenarStr=%s, tipeSoal=%s, bobot=%f, pilihanJawaban=%v\n",
+	// 	jawabanSiswaStr, jawabanBenarStr, tipeSoal, bobot, pilihanJawaban)
 
 	var skor float64 = 0
 
@@ -113,13 +113,13 @@ func hitungSkorObjektif(jawabanSiswaStr string, jawabanBenarStr string, tipeSoal
 		json.Unmarshal([]byte(jawabanSiswaStr), &siswaArr)
 		json.Unmarshal([]byte(jawabanBenarStr), &benarArr)
 
-		fmt.Printf("DEBUG hitungSkorObjektif PG: siswaArr=%v, benarArr=%v\n", siswaArr, benarArr)
+		// fmt.Printf("DEBUG hitungSkorObjektif PG: siswaArr=%v, benarArr=%v\n", siswaArr, benarArr)
 
 		// Konversi index → teks
 		siswaTeks := konversiIndexKeTeks(siswaArr, pilihanJawaban)
 		benarTeks := konversiIndexKeTeks(benarArr, pilihanJawaban)
 
-		fmt.Printf("DEBUG hitungSkorObjektif PG: siswaTeks=%v, benarTeks=%v\n", siswaTeks, benarTeks)
+		// fmt.Printf("DEBUG hitungSkorObjektif PG: siswaTeks=%v, benarTeks=%v\n", siswaTeks, benarTeks)
 
 		if len(siswaTeks) > 0 && len(benarTeks) > 0 && siswaTeks[0] == benarTeks[0] {
 			skor = bobot
@@ -135,19 +135,19 @@ func hitungSkorObjektif(jawabanSiswaStr string, jawabanBenarStr string, tipeSoal
 		siswaTeks := konversiIndexKeTeks(siswaIndex, pilihanJawaban)
 		benarTeks := konversiIndexKeTeks(benarIndex, pilihanJawaban)
 
-		fmt.Printf("DEBUG hitungSkorObjektif PG_KOMPLEKS: siswaIndex=%v, benarIndex=%v\n", siswaIndex, benarIndex)
-		fmt.Printf("DEBUG hitungSkorObjektif PG_KOMPLEKS: siswaTeks=%v, benarTeks=%v\n", siswaTeks, benarTeks)
+		// fmt.Printf("DEBUG hitungSkorObjektif PG_KOMPLEKS: siswaIndex=%v, benarIndex=%v\n", siswaIndex, benarIndex)
+		// fmt.Printf("DEBUG hitungSkorObjektif PG_KOMPLEKS: siswaTeks=%v, benarTeks=%v\n", siswaTeks, benarTeks)
 
 		if len(benarTeks) > 0 {
 			perItem := bobot / float64(len(benarTeks))
-			fmt.Printf("DEBUG hitungSkorObjektif PG_KOMPLEKS: perItem=%f\n", perItem)
+			// fmt.Printf("DEBUG hitungSkorObjektif PG_KOMPLEKS: perItem=%f\n", perItem)
 
 			for i := range benarTeks {
 				if i < len(siswaTeks) && siswaTeks[i] == benarTeks[i] {
 					skor += perItem
-					fmt.Printf("DEBUG PG_KOMPLEKS: Item %d benar, skor sementara=%f\n", i, skor)
+					// fmt.Printf("DEBUG PG_KOMPLEKS: Item %d benar, skor sementara=%f\n", i, skor)
 				} else {
-					fmt.Printf("DEBUG PG_KOMPLEKS: Item %d salah\n", i)
+					// fmt.Printf("DEBUG PG_KOMPLEKS: Item %d salah\n", i)
 				}
 			}
 		}
@@ -162,7 +162,7 @@ func hitungSkorObjektif(jawabanSiswaStr string, jawabanBenarStr string, tipeSoal
 		json.Unmarshal([]byte(jawabanSiswaStr), &siswa)
 		json.Unmarshal([]byte(jawabanBenarStr), &benarArr)
 
-		fmt.Printf("DEBUG hitungSkorObjektif BS: siswa=%v, benarArr=%v\n", siswa, benarArr)
+		// fmt.Printf("DEBUG hitungSkorObjektif BS: siswa=%v, benarArr=%v\n", siswa, benarArr)
 
 		if len(benarArr) > 0 {
 			perItem := bobot / float64(len(benarArr))
@@ -172,9 +172,9 @@ func hitungSkorObjektif(jawabanSiswaStr string, jawabanBenarStr string, tipeSoal
 				if js.Index >= 0 && js.Index < len(benarArr) {
 					if strings.ToLower(strings.TrimSpace(js.Jawaban)) == strings.ToLower(strings.TrimSpace(benarArr[js.Index])) {
 						benarCount++
-						fmt.Printf("DEBUG BS: index=%d jawaban='%s' BENAR\n", js.Index, js.Jawaban)
+						// fmt.Printf("DEBUG BS: index=%d jawaban='%s' BENAR\n", js.Index, js.Jawaban)
 					} else {
-						fmt.Printf("DEBUG BS: index=%d jawaban='%s' SALAH (kunci='%s')\n", js.Index, js.Jawaban, benarArr[js.Index])
+						// fmt.Printf("DEBUG BS: index=%d jawaban='%s' SALAH (kunci='%s')\n", js.Index, js.Jawaban, benarArr[js.Index])
 					}
 				}
 			}
@@ -188,7 +188,7 @@ func hitungSkorObjektif(jawabanSiswaStr string, jawabanBenarStr string, tipeSoal
 		}
 		json.Unmarshal([]byte(jawabanSiswaStr), &siswa)
 
-		fmt.Printf("DEBUG hitungSkorObjektif matching: siswa=%v\n", siswa)
+		// fmt.Printf("DEBUG hitungSkorObjektif matching: siswa=%v\n", siswa)
 
 		if len(siswa) > 0 {
 			perItem := bobot / float64(len(siswa))
@@ -210,19 +210,19 @@ func hitungSkorObjektif(jawabanSiswaStr string, jawabanBenarStr string, tipeSoal
 		json.Unmarshal([]byte(jawabanSiswaStr), &jwbSiswa)
 		json.Unmarshal([]byte(jawabanBenarStr), &jwbBenar)
 
-		fmt.Printf("DEBUG hitungSkorObjektif %s: jwbSiswa=%s, jwbBenar=%s\n", tipeSoal, jwbSiswa, jwbBenar)
+		// fmt.Printf("DEBUG hitungSkorObjektif %s: jwbSiswa=%s, jwbBenar=%s\n", tipeSoal, jwbSiswa, jwbBenar)
 
 		siswaTrimmed := strings.TrimSpace(strings.ToLower(jwbSiswa))
 		benarTrimmed := strings.TrimSpace(strings.ToLower(jwbBenar))
-		fmt.Printf("DEBUG hitungSkorObjektif %s: setelah trim dan lowercase: siswa='%s', benar='%s'\n",
-			tipeSoal, siswaTrimmed, benarTrimmed)
+		// fmt.Printf("DEBUG hitungSkorObjektif %s: setelah trim dan lowercase: siswa='%s', benar='%s'\n",
+		// 	tipeSoal, siswaTrimmed, benarTrimmed)
 
 		if siswaTrimmed == benarTrimmed {
 			skor = bobot
 		}
 	}
 
-	fmt.Printf("DEBUG hitungSkorObjektif: Skor akhir=%f\n", skor)
+	// fmt.Printf("DEBUG hitungSkorObjektif: Skor akhir=%f\n", skor)
 	return skor
 }
 

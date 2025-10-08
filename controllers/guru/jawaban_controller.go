@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/entertrans/bi-backend-go/config"
@@ -557,8 +556,9 @@ func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{},
 	// --- 4. Ambil jawaban sesuai jenis
 	var jawaban []models.JawabanResponse
 
-	if strings.ToUpper(jenis) == "ub" {
-		// log.Printf("masuk area sini")
+	if (jenis) == "ub" {
+
+		log.Printf("masuk area sini 1")
 		// kalau jenis UB → ambil dari banksoal
 		config.DB.Table("to_jawabanfinal j").
 			Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
@@ -575,7 +575,7 @@ func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{},
 			Where("j.session_id = ?", sessionID).
 			Scan(&jawaban)
 	} else {
-		log.Printf("masuk area sini")
+
 		// selain UB → ambil dari testsoal
 		config.DB.Table("to_jawabanfinal j").
 			Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
