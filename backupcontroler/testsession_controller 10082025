@@ -327,20 +327,148 @@ func GetTestSession(testID uint, nis string) (*models.TestSession, error) {
 	return &session, nil
 }
 
+// Submit test (update end_time & status jadi submitted)
+func SubmitTestSession(sessionID uint) error {
+	db := config.DB
+
+	// Mulai transaction
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		return err
+	}
+
+	// 1. Ambil semua data jawaban final dengan detail bobot dan tipe soal
+	type JawabanDetail struct {
+		FinalID      uint
+		SoalID       uint
+		TipeSoal     string
+		Bobot        float64
+		SkorObjektif float64
+		SkorUraian   *float64
+	}
+
+	var jawabanDetails []JawabanDetail
+	err := tx.Table("to_jawabanfinal jf").
+		Select("jf.final_id, jf.soal_id, bs.tipe_soal, bs.bobot, jf.skor_objektif").
+		Joins("JOIN to_banksoal bs ON jf.soal_id = bs.soal_id").
+		Where("jf.session_id = ?", sessionID).
+		Scan(&jawabanDetails).Error
+
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("gagal mengambil detail jawaban: %v", err)
+	}
+
+	// 2. Hitung manual dengan logging detail
+	totalSkorSiswa := 0.0
+	totalSkorMaksimal := 0.0
+	butuhReview := false
+
+	log.Printf("=== DETAIL PERHITUNGAN NILAI SESSION %d ===", sessionID)
+
+	for i, jd := range jawabanDetails {
+		totalSkorMaksimal += jd.Bobot
+
+		var skorSoal float64
+		var keterangan string
+
+		// Gunakan switch statement untuk tipe soal
+		switch jd.TipeSoal {
+		case "pg", "pg_kompleks", "bs", "matching":
+			// Untuk soal objektif, skor_objektif SUDAH termasuk bobot
+			skorSoal = jd.SkorObjektif
+			keterangan = fmt.Sprintf("Objektif: %.2f (sudah termasuk bobot)", jd.SkorObjektif)
+
+		case "uraian", "isian_singkat":
+			// Tipe soal subjektif (butuh review guru)
+			if jd.SkorUraian == nil {
+				skorSoal = 0
+				butuhReview = true
+				keterangan = "Uraian/Isian: Belum dinilai (0)"
+			} else {
+				// Untuk uraian/isian, skor SUDAH termasuk bobot
+				skorSoal = *jd.SkorUraian
+				keterangan = fmt.Sprintf("Uraian/Isian: %.2f (sudah termasuk bobot)", *jd.SkorUraian)
+			}
+
+		default:
+			skorSoal = 0
+			keterangan = fmt.Sprintf("Tipe tidak dikenali: %s", jd.TipeSoal)
+		}
+
+		totalSkorSiswa += skorSoal
+
+		log.Printf("Soal %d (ID:%d, Tipe:%s, Bobot:%.2f): %s",
+			i+1, jd.SoalID, jd.TipeSoal, jd.Bobot, keterangan)
+	}
+
+	log.Printf("=== TOTAL ===")
+	log.Printf("Total Skor Siswa: %.2f", totalSkorSiswa)
+	log.Printf("Total Skor Maksimal: %.2f", totalSkorMaksimal)
+	log.Printf("Butuh Review: %t", butuhReview)
+
+	// 3. Hitung nilai akhir (dalam persentase)
+	var nilaiAkhir float64
+	if totalSkorMaksimal > 0 {
+		nilaiAkhir = (totalSkorSiswa / totalSkorMaksimal) * 100
+		log.Printf("Perhitungan: (%.2f / %.2f) × 100 = %.2f",
+			totalSkorSiswa, totalSkorMaksimal, nilaiAkhir)
+	} else {
+		log.Printf("Perhitungan: Total maksimal 0, nilai akhir 0")
+	}
+
+	// 5. Update session
+	updateData := map[string]interface{}{
+		"end_time":    time.Now(),
+		"status":      "submitted",
+		"nilai_akhir": nilaiAkhir,
+		"updated_at":  time.Now(),
+	}
+
+	if err := tx.Model(&models.TestSession{}).
+		Where("session_id = ?", sessionID).
+		Updates(updateData).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("gagal update session: %v", err)
+	}
+
+	// log.Printf("=== UPDATE SESSION BERHASIL ===")
+	// log.Printf("Nilai Akhir: %.2f", nilaiAkhir)
+	// log.Printf("Status: %s", status)
+
+	// 6. Commit transaction
+	return tx.Commit().Error
+}
+
+func SubmitTugasSession(sessionID uint) error {
+	return config.DB.Model(&models.TestSession{}).
+		Where("session_id = ?", sessionID).
+		Update("status", "onqueue").Error
+}
+
 func SubmitSession(sessionID uint, tipeUjian string) error {
 	db := config.DB
 
-	// 🔍 Tentukan join sesuai jenis ujian
+	// Tentukan join condition dan table yang benar
 	var query *gorm.DB
+
 	if tipeUjian == "ub" {
+		// Untuk UB: join dengan to_banksoal
 		query = db.Table("to_jawabanfinal jf").
 			Select("bs.tipe_soal, bs.bobot, jf.skor_objektif, jf.skor_uraian").
 			Joins("JOIN to_banksoal bs ON jf.soal_id = bs.soal_id").
 			Where("jf.session_id = ?", sessionID)
 	} else {
+		// Untuk Non-UB: join dengan to_testsoal, tapi perhatikan kolomnya!
 		query = db.Table("to_jawabanfinal jf").
 			Select("bs.tipe_soal, bs.bobot, jf.skor_objektif, jf.skor_uraian").
-			Joins("JOIN to_testsoal bs ON jf.soal_id = bs.testsoal_id").
+			Joins("JOIN to_testsoal bs ON jf.soal_id = bs.testsoal_id"). // PASTIKAN INI!
 			Where("jf.session_id = ?", sessionID)
 	}
 
@@ -349,7 +477,7 @@ func SubmitSession(sessionID uint, tipeUjian string) error {
 		return tx.Error
 	}
 
-	// Ambil semua jawaban
+	// Ambil data jawaban
 	var jawabanDetails []struct {
 		TipeSoal     string
 		Bobot        float64
@@ -357,7 +485,8 @@ func SubmitSession(sessionID uint, tipeUjian string) error {
 		SkorUraian   *float64
 	}
 
-	if err := query.Scan(&jawabanDetails).Error; err != nil {
+	err := query.Scan(&jawabanDetails).Error
+	if err != nil {
 		tx.Rollback()
 		log.Printf("❌ Error mengambil jawaban: %v", err)
 		return err
@@ -365,59 +494,50 @@ func SubmitSession(sessionID uint, tipeUjian string) error {
 
 	log.Printf("🔍 DEBUG SubmitSession: Found %d jawaban details for session %d", len(jawabanDetails), sessionID)
 
-	// 🔢 Perhitungan nilai
-	totalSkorSiswa := 0.0
-	totalSkorMaksimal := 0.0
-	butuhReview := false
-
 	for i, jd := range jawabanDetails {
+		log.Printf("🔍 DEBUG Jawaban %d: Tipe=%s, Bobot=%.2f, SkorObj=%.2f, SkorUraian=%v",
+			i+1, jd.TipeSoal, jd.Bobot, jd.SkorObjektif, jd.SkorUraian)
+	}
+
+	// Hitung nilai
+	totalSkorSiswa, totalSkorMaksimal, butuhReview := 0.0, 0.0, false
+
+	for _, jd := range jawabanDetails {
 		totalSkorMaksimal += jd.Bobot
 
-		var skorSoal float64
-
+		skorSoal := jd.SkorObjektif
 		if jd.TipeSoal == "uraian" || jd.TipeSoal == "isian_singkat" {
-			// Skor uraian bisa null (belum dinilai)
 			if jd.SkorUraian != nil {
 				skorSoal = *jd.SkorUraian
 			} else {
-				skorSoal = 0
-				butuhReview = true
+				skorSoal, butuhReview = 0, true
 			}
-		} else {
-			skorSoal = jd.SkorObjektif
-		}
-
-		// 🔒 Jangan biarkan skor melebihi bobot
-		if skorSoal > jd.Bobot {
-			skorSoal = jd.Bobot
 		}
 
 		totalSkorSiswa += skorSoal
-
-		log.Printf("➡️ Soal %d | Tipe=%s | Bobot=%.2f | SkorObj=%.2f | SkorUraian=%v | SkorFinal=%.2f",
-			i+1, jd.TipeSoal, jd.Bobot, jd.SkorObjektif, jd.SkorUraian, skorSoal)
 	}
 
-	// 💯 Hitung nilai akhir
+	log.Printf("🔍 DEBUG Perhitungan: TotalSiswa=%.2f, TotalMaksimal=%.2f, ButuhReview=%t",
+		totalSkorSiswa, totalSkorMaksimal, butuhReview)
+
+	// Update session
 	nilaiAkhir := 0.0
 	if totalSkorMaksimal > 0 {
 		nilaiAkhir = (totalSkorSiswa / totalSkorMaksimal) * 100
 	}
 
-	log.Printf("🔍 DEBUG Perhitungan: TotalSiswa=%.2f, TotalMaksimal=%.2f, NilaiAkhir=%.2f, ButuhReview=%t",
-		totalSkorSiswa, totalSkorMaksimal, nilaiAkhir, butuhReview)
+	// Default status
+	status := "submitted"
+	// if butuhReview {
+	// 	status = "onqueue"
+	// }
 
-	// 🟡 Tentukan status
-	status := "graded"
-	if butuhReview {
-		status = "submitted"
-	}
+	// 🔸 Kalo tipe ujian = tugas, paksa status jadi "onqueue"
 	if tipeUjian == "tugas" {
 		status = "onqueue"
 	}
 
-	// 💾 Update session
-	err := tx.Model(&models.TestSession{}).
+	err = tx.Model(&models.TestSession{}).
 		Where("session_id = ?", sessionID).
 		Updates(map[string]interface{}{
 			"end_time":    time.Now(),
@@ -425,12 +545,14 @@ func SubmitSession(sessionID uint, tipeUjian string) error {
 			"nilai_akhir": nilaiAkhir,
 			"updated_at":  time.Now(),
 		}).Error
+
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	log.Printf("✅ Session %d submitted: Nilai=%.2f, Status=%s", sessionID, nilaiAkhir, status)
+
 	return tx.Commit().Error
 }
 

@@ -60,7 +60,7 @@ func SaveJawabanFinal(sessionID uint, soalID uint, jawaban string, _ float64, ti
 	}
 
 	// fmt.Printf("DEBUG SaveJawabanFinal: jawabanBenar=%s, bobot=%f, tipeSoal=%s, pilihanJawaban=%v\n",
-		// jawabanBenar, bobot, tipeSoal, pilihanJawaban)
+	// jawabanBenar, bobot, tipeSoal, pilihanJawaban)
 
 	// 2. Hitung skor objektif dengan pilihan jawaban
 	skorObjektif := hitungSkorObjektif(jawaban, jawabanBenar, tipeSoal, bobot, pilihanJawaban)

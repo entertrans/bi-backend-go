@@ -225,63 +225,24 @@ func GetSessionSoalHandler(c *gin.Context) {
 
 // POST /siswa/test/submit/:session_id
 func SubmitSessionHandler(c *gin.Context) {
-    tipeUjian := c.Param("tipe_ujian")
-    sessionID, err := strconv.ParseUint(c.Param("session_id"), 10, 32)
-    if err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Session ID tidak valid"})
-        return
-    }
-
-    if err := siswaControllers.SubmitSession(uint(sessionID), tipeUjian); err != nil {
-        log.Printf("❌ Gagal submit test session %d: %v", sessionID, err)
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal submit test"})
-        return
-    }
-
-    c.JSON(http.StatusOK, gin.H{
-        "message":      "Test berhasil disubmit",
-        "submitted_at": time.Now(),
-    })
-}
-
-func SubmitTugasHandler(c *gin.Context) {
-	sessionID, _ := strconv.Atoi(c.Param("session_id"))
-
-	err := siswaControllers.SubmitTugasSession(uint(sessionID))
+	tipeUjian := c.Param("tipe_ujian")
+	sessionID, err := strconv.ParseUint(c.Param("session_id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal submit tugas"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Session ID tidak valid"})
+		return
+	}
+
+	if err := siswaControllers.SubmitSession(uint(sessionID), tipeUjian); err != nil {
+		log.Printf("❌ Gagal submit test session %d: %v", sessionID, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal submit test"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":      "Tugas berhasil dikumpulkan (onqueue)",
+		"message":      "Test berhasil disubmit",
 		"submitted_at": time.Now(),
 	})
 }
-
-// func SubmitSessionHandler(c *gin.Context) {
-//     var request struct {
-//         SessionID uint   `json:"session_id" binding:"required"`
-//         TipeUjian string `json:"tipe_ujian" binding:"required"`
-//     }
-
-//     if err := c.ShouldBindJSON(&request); err != nil {
-//         c.JSON(http.StatusBadRequest, gin.H{"error": "Data tidak valid"})
-//         return
-//     }
-
-//     if err := siswaControllers.SubmitSession(request.SessionID, request.TipeUjian); err != nil {
-//         log.Printf("❌ Gagal submit test session %d: %v", request.SessionID, err)
-//         c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal submit test"})
-//         return
-//     }
-
-//     c.JSON(http.StatusOK, gin.H{
-//         "message":      "Test berhasil disubmit",
-//         "submitted_at": time.Now(),
-//     })
-// }
-
 
 // handler/siswaHandler.go
 func GetNotStartedTestsHandler(c *gin.Context) {
