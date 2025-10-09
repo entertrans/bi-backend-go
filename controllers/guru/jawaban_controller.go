@@ -1,6 +1,7 @@
 package gurucontrollers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -554,14 +555,13 @@ func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{},
 		Take(&siswa)
 
 	// --- 4. Ambil jawaban sesuai jenis
-	var jawaban []models.JawabanResponse
+    var jawaban []models.JawabanResponse
 
-	if (jenis) == "ub" {
-
-		log.Printf("masuk area sini 1")
-		// kalau jenis UB → ambil dari banksoal
-		config.DB.Table("to_jawabanfinal j").
-			Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
+    if jenis == "ub" {
+        log.Printf("masuk area sini 1")
+        // kalau jenis UB → ambil dari banksoal
+        config.DB.Table("to_jawabanfinal j").
+            Select(`j.soal_id, b.pertanyaan, b.tipe_soal,
                 CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
                 CAST(b.jawaban_benar AS CHAR) AS jawaban_benar,
                 CAST(b.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
@@ -570,44 +570,132 @@ func FetchJawabanBySession(sessionID int, jenis string) (map[string]interface{},
                 l.nama_file AS lampiran_nama_file,
                 l.tipe_file AS lampiran_tipe_file,
                 l.path_file AS lampiran_path_file`).
-			Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
-			Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
-			Where("j.session_id = ?", sessionID).
-			Scan(&jawaban)
-	} else {
-
-		// selain UB → ambil dari testsoal
-		config.DB.Table("to_jawabanfinal j").
-			Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
+            Joins("JOIN to_banksoal b ON b.soal_id = j.soal_id").
+            Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = b.lampiran_id").
+            Where("j.session_id = ?", sessionID).
+            Scan(&jawaban)
+    } else {
+        // selain UB → ambil dari testsoal
+        config.DB.Table("to_jawabanfinal j").
+            Select(`j.soal_id, t.pertanyaan, t.tipe_soal,
                 CAST(j.jawaban_siswa AS CHAR) AS jawaban_siswa,
                 CAST(t.jawaban_benar AS CHAR) AS jawaban_benar,
+                CAST(t.pilihan_jawaban AS CHAR) AS pilihan_jawaban,
                 j.skor_objektif, j.skor_uraian,
                 t.bobot AS max_score,
                 l.nama_file AS lampiran_nama_file,
                 l.tipe_file AS lampiran_tipe_file,
                 l.path_file AS lampiran_path_file`).
-			Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
-			Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
-			Where("j.session_id = ?", sessionID).
-			Scan(&jawaban)
-	}
+            Joins("JOIN to_testsoal t ON t.testsoal_id = j.soal_id").
+            Joins("LEFT JOIN TO_Lampiran l ON l.lampiran_id = t.lampiran_id").
+            Where("j.session_id = ?", sessionID).
+            Scan(&jawaban)
+    }
 
-	// --- 5. Response final
-	response := map[string]interface{}{
-		"session_id": session.SessionID,
-		"test": map[string]interface{}{
-			"judul": test.Judul,
-			"mapel": test.Mapel,
-			"nilai": session.NilaiAkhir,
-		},
-		"siswa": map[string]interface{}{
-			"nis":  siswa.NIS,
-			"nama": siswa.Nama,
-		},
-		"jawaban": jawaban,
-	}
+     // --- 5. Convert jawaban ke slice of maps untuk processing
+    jawabanMaps := make([]map[string]interface{}, len(jawaban))
+    
+    for i, j := range jawaban {
+        jawabanMap := map[string]interface{}{
+            "soal_id":            j.SoalID,
+            "pertanyaan":         j.Pertanyaan,
+            "tipe_soal":          j.TipeSoal,
+            "jawaban_siswa":      j.JawabanSiswa,
+            "skor_objektif":      j.SkorObjektif,
+            "max_score":          j.MaxScore,
+            "skor":               j.Score,
+        }
 
-	return response, nil
+        // Handle JawabanBenar (pointer string)
+        if j.JawabanBenar != nil {
+            jawabanMap["jawaban_benar"] = *j.JawabanBenar
+        } else {
+            jawabanMap["jawaban_benar"] = ""
+        }
+
+        // Handle PilihanJawaban (pointer string)
+        if j.PilihanJawaban != nil {
+            jawabanMap["pilihan_jawaban"] = *j.PilihanJawaban
+        } else {
+            jawabanMap["pilihan_jawaban"] = ""
+        }
+
+        // Handle SkorUraian (pointer float64)
+        if j.SkorUraian != nil {
+            jawabanMap["skor_uraian"] = *j.SkorUraian
+        } else {
+            jawabanMap["skor_uraian"] = nil
+        }
+
+        // Handle lampiran fields
+        if j.LampiranNamaFile != nil {
+            jawabanMap["lampiran_nama_file"] = *j.LampiranNamaFile
+        }
+        if j.LampiranTipeFile != nil {
+            jawabanMap["lampiran_tipe_file"] = *j.LampiranTipeFile
+        }
+        if j.LampiranPathFile != nil {
+            jawabanMap["lampiran_path_file"] = *j.LampiranPathFile
+        }
+
+        // Process matching type
+        if j.TipeSoal == "matching" {
+            currentJawabanBenar := jawabanMap["jawaban_benar"].(string)
+            currentPilihanJawaban := jawabanMap["pilihan_jawaban"].(string)
+            
+            if currentJawabanBenar == "" || currentJawabanBenar == "[]" {
+                generatedAnswer := generateMatchingAnswerKey(currentPilihanJawaban)
+                jawabanMap["jawaban_benar"] = generatedAnswer
+            }
+        }
+
+        jawabanMaps[i] = jawabanMap
+    }
+
+    // --- 6. Response final
+    response := map[string]interface{}{
+        "session_id": session.SessionID,
+        "test": map[string]interface{}{
+            "judul": test.Judul,
+            "mapel": test.Mapel,
+            "nilai": session.NilaiAkhir,
+        },
+        "siswa": map[string]interface{}{
+            "nis":  siswa.NIS,
+            "nama": siswa.Nama,
+        },
+        "jawaban": jawabanMaps, // gunakan jawabanMaps yang sudah diprocess
+    }
+
+    return response, nil
+}
+
+// Function untuk generate jawaban_benar untuk tipe matching
+func generateMatchingAnswerKey(pilihanJawaban string) string {
+    if pilihanJawaban == "" {
+        return "[]"
+    }
+    
+    var pilihan []map[string]interface{}
+    if err := json.Unmarshal([]byte(pilihanJawaban), &pilihan); err != nil {
+        return "[]"
+    }
+
+    var jawabanBenar []map[string]interface{}
+    for i, pair := range pilihan {
+        jawabanBenar = append(jawabanBenar, map[string]interface{}{
+            "leftIndex":  i,
+            "rightIndex": i,
+            "left":       pair["left"],
+            "right":      pair["right"],
+        })
+    }
+
+    result, err := json.Marshal(jawabanBenar)
+    if err != nil {
+        return "[]"
+    }
+    return string(result)
 }
 
 func UpdateNilaiJawaban(sessionID int, perubahan []struct {
