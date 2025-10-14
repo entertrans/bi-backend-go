@@ -84,6 +84,11 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		// SiswaJawab.GET("/session/:test_id/jawaban", guruhandlers.GetSoalPenilaianHandler)
 		// SiswaJawab.GET("/session/:test_id/jawaban", guruhandlers.GetSoalPenilaianHandler)
 	}
+	SiswaJawabRb := r.Group("/guru/jawaban")
+	{
+		SiswaJawabRb.GET("/rollback/siswa/:siswa_nis", guruhandlers.GetJawabanBySiswaHandler)
+		SiswaJawab.GET("/session/rollback/:session_id/:jenis/jawaban", guruhandlers.GetJawabanBySession)
+	}
 
 	nilaiGroup := r.Group("/guru/nilai")
 	{
