@@ -89,6 +89,12 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		SiswaJawabRb.GET("/rollback/siswa/:siswa_nis", guruhandlers.GetJawabanBySiswaHandler)
 		SiswaJawab.GET("/session/rollback/:session_id/:jenis/jawaban", guruhandlers.GetJawabanBySession)
 	}
+	SiswaDataRb := r.Group("/guru/rollback/")
+	{
+		SiswaDataRb.GET("status", guruhandlers.GetRollbackStatusHandler)
+		SiswaDataRb.POST("import/:table", guruhandlers.ImportRollbackSQLHandler)
+		SiswaDataRb.POST("reset", guruhandlers.ResetAllRollbackTablesHandler)
+	}
 
 	nilaiGroup := r.Group("/guru/nilai")
 	{

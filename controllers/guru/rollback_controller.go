@@ -2,7 +2,9 @@ package gurucontrollers
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/entertrans/bi-backend-go/config"
 	"github.com/entertrans/bi-backend-go/models"
@@ -350,3 +352,103 @@ func FetchRBJawabanBySession(sessionID int, jenis string) (map[string]interface{
 
 	return response, nil
 }
+
+// rollback data
+// Daftar tabel rollback
+var rollbackTables = []string{
+	"rb_banksoal",
+	"rb_jawabanfinal",
+	"rb_lampiran",
+	"rb_peserta",
+	"rb_sessionsoal",
+	"rb_test",
+	"rb_testsession",
+	"rb_testsoal",
+	"rb_test_soal",
+}
+
+// ✅ Ambil status data di semua tabel rollback
+func GetRollbackStatus() (map[string]bool, error) {
+	status := make(map[string]bool)
+
+	for _, table := range rollbackTables {
+		var count int64
+		err := config.DB.Table(table).Count(&count).Error
+		if err != nil {
+			status[table] = false
+		} else {
+			status[table] = count > 0
+		}
+	}
+
+	return status, nil
+}
+
+// ✅ Import file SQL ke tabel rollback
+func ImportRollbackSQL(table string, filePath string) error {
+	// Baca isi file SQL
+	sqlBytes, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("gagal membaca file SQL: %v", err)
+	}
+
+	sqlContent := string(sqlBytes)
+	statements := strings.Split(sqlContent, ";")
+
+	db, err := config.DB.DB()
+	if err != nil {
+		return fmt.Errorf("gagal konek ke database: %v", err)
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+
+	for _, stmt := range statements {
+		query := strings.TrimSpace(stmt)
+		if query == "" {
+			continue
+		}
+
+		if _, err := tx.Exec(query); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("gagal menjalankan query: %v", err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("gagal commit transaksi: %v", err)
+	}
+
+	return nil
+}
+
+// ✅ Reset semua tabel rollback
+func ResetAllRollbackTables() error {
+	db, err := config.DB.DB()
+	if err != nil {
+		return fmt.Errorf("gagal konek ke database: %v", err)
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("gagal memulai transaksi: %v", err)
+	}
+
+	for _, table := range rollbackTables {
+		query := fmt.Sprintf("DELETE FROM %s;", table)
+		if _, err := tx.Exec(query); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("gagal menghapus data tabel %s: %v", table, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("gagal commit transaksi: %v", err)
+	}
+
+	return nil
+}
+
+// end of rollbackdata
