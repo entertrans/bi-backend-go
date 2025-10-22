@@ -1,6 +1,7 @@
 package gurucontrollers
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,7 +11,6 @@ import (
 	"github.com/entertrans/bi-backend-go/models"
 	"gorm.io/gorm"
 )
-
 
 func GetJawabanRollbackBySiswaNIS(siswaNIS string) ([]TestJawabanResult, error) {
 	db := config.DB
@@ -90,9 +90,9 @@ func buildRBTestResult(db *gorm.DB, test models.RB_Test, siswaNIS string) (TestJ
 	// 2. kalau kosong → ambil dari to_sessionsoal join banksoal (untuk ub)
 	if len(tipeList) == 0 && session.SessionID != 0 {
 		db.Table("rb_sessionsoal").
-  Select("rb_banksoal.tipe_soal").
-  Joins("JOIN rb_banksoal ON rb_sessionsoal.soal_id = rb_banksoal.soal_id").
-  Where("rb_sessionsoal.session_id = ?", session.SessionID)
+			Select("rb_banksoal.tipe_soal").
+			Joins("JOIN rb_banksoal ON rb_sessionsoal.soal_id = rb_banksoal.soal_id").
+			Where("rb_sessionsoal.session_id = ?", session.SessionID)
 
 	}
 
@@ -386,14 +386,15 @@ func GetRollbackStatus() (map[string]bool, error) {
 
 // ✅ Import file SQL ke tabel rollback
 func ImportRollbackSQL(table string, filePath string) error {
-	// Baca isi file SQL
 	sqlBytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("gagal membaca file SQL: %v", err)
 	}
 
 	sqlContent := string(sqlBytes)
-	statements := strings.Split(sqlContent, ";")
+
+	// Parser aman: pisahkan query per statement
+	statements := parseSQLStatements(sqlContent)
 
 	db, err := config.DB.DB()
 	if err != nil {
@@ -411,9 +412,10 @@ func ImportRollbackSQL(table string, filePath string) error {
 			continue
 		}
 
+		// Jalankan query
 		if _, err := tx.Exec(query); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("gagal menjalankan query: %v", err)
+			return fmt.Errorf("gagal menjalankan query: %v\nQuery: %s", err, query)
 		}
 	}
 
@@ -422,6 +424,111 @@ func ImportRollbackSQL(table string, filePath string) error {
 	}
 
 	return nil
+}
+
+// ✅ Parser SQL yang memperhitungkan string, escape, dan komentar
+func parseSQLStatements(sqlContent string) []string {
+	var statements []string
+	var current strings.Builder
+	inString := false
+	stringChar := rune(0)
+	escaped := false
+	commentLine := false
+	commentBlock := false
+
+	reader := bufio.NewReader(strings.NewReader(sqlContent))
+
+	for {
+		r, _, err := reader.ReadRune()
+		if err != nil {
+			break
+		}
+
+		// Cek komentar single-line (-- atau #)
+		if !inString && !commentBlock {
+			if r == '-' {
+				next, _ := reader.Peek(1)
+				if len(next) == 1 && next[0] == '-' {
+					commentLine = true
+				}
+			} else if r == '#' {
+				commentLine = true
+			}
+		}
+
+		// Komentar block /* ... */
+		if !inString && !commentLine {
+			if r == '/' {
+				next, _ := reader.Peek(1)
+				if len(next) == 1 && next[0] == '*' {
+					commentBlock = true
+					reader.ReadRune() // lewati '*'
+					continue
+				}
+			}
+		}
+
+		// Tutup komentar block
+		if commentBlock {
+			if r == '*' {
+				next, _ := reader.Peek(1)
+				if len(next) == 1 && next[0] == '/' {
+					commentBlock = false
+					reader.ReadRune()
+				}
+			}
+			continue
+		}
+
+		// Tutup komentar baris
+		if commentLine {
+			if r == '\n' {
+				commentLine = false
+			}
+			continue
+		}
+
+		// Escape handling
+		if escaped {
+			current.WriteRune(r)
+			escaped = false
+			continue
+		}
+
+		// Masuk / keluar string
+		if r == '\\' && inString {
+			escaped = true
+			current.WriteRune(r)
+			continue
+		}
+
+		if (r == '\'' || r == '"') && !escaped {
+			if !inString {
+				inString = true
+				stringChar = r
+			} else if r == stringChar {
+				inString = false
+			}
+			current.WriteRune(r)
+			continue
+		}
+
+		// Split query hanya kalau ; di luar string
+		if r == ';' && !inString {
+			statements = append(statements, current.String())
+			current.Reset()
+			continue
+		}
+
+		current.WriteRune(r)
+	}
+
+	// Tambahkan sisa query terakhir
+	if strings.TrimSpace(current.String()) != "" {
+		statements = append(statements, current.String())
+	}
+
+	return statements
 }
 
 // ✅ Reset semua tabel rollback
