@@ -3,6 +3,7 @@ package siswa
 import (
 	"github.com/entertrans/bi-backend-go/config"
 	"github.com/entertrans/bi-backend-go/models"
+	"gorm.io/gorm"
 )
 
 type HistorySiswaKeuangan struct {
@@ -148,49 +149,58 @@ type KwitansiTagihan struct {
 	Status        string `json:"status"` // contoh: "Belum Lunas", "Lunas"
 }
 
-func GetLatestUnpaidInvoiceByNIS(nis string) (KwitansiTagihan, error) {
-	var penerima models.InvoicePenerima
+func GetLatestUnpaidInvoiceByNIS(nis string) ([]KwitansiTagihan, error) {
+	var penerimas []models.InvoicePenerima
 	err := config.DB.
 		Preload("Invoice.Tagihan").
 		Preload("Tambahan").
 		Preload("Pembayaran").
 		Where("nis = ?", nis).
-		Order("id_invoice DESC"). // ambil yang terbaru
-		First(&penerima).Error
+		Order("id DESC").
+		Find(&penerimas).Error
 	if err != nil {
-		return KwitansiTagihan{}, err
+		return nil, err
 	}
 
-	// Hitung total
-	totalTagihan := 0
-	for _, t := range penerima.Invoice.Tagihan {
-		totalTagihan += t.Nominal
-	}
-	totalTambahan := 0
-	for _, t := range penerima.Tambahan {
-		totalTambahan += t.Nominal
-	}
-	totalBayar := 0
-	for _, p := range penerima.Pembayaran {
-		totalBayar += p.Nominal
+	var results []KwitansiTagihan
+
+	for _, penerima := range penerimas {
+		totalTagihan := 0
+		for _, t := range penerima.Invoice.Tagihan {
+			totalTagihan += t.Nominal
+		}
+
+		totalTambahan := 0
+		for _, t := range penerima.Tambahan {
+			totalTambahan += t.Nominal
+		}
+
+		totalBayar := 0
+		for _, p := range penerima.Pembayaran {
+			totalBayar += p.Nominal
+		}
+
+		totalFinal := totalTagihan - penerima.Potongan + totalTambahan
+		sisa := totalFinal - totalBayar
+
+		if sisa > 0 { // hanya masukkan yang belum lunas
+			results = append(results, KwitansiTagihan{
+				InvoiceID:     penerima.Invoice.IDInvoice,
+				Deskripsi:     penerima.Invoice.Deskripsi,
+				TglInvoice:    penerima.Invoice.TglInvoice,
+				TglJatuhTempo: penerima.Invoice.TglJatuhTempo,
+				TotalTagihan:  totalFinal,
+				TotalBayar:    totalBayar,
+				SisaTagihan:   sisa,
+				Status:        "Belum Lunas",
+			})
+		}
 	}
 
-	totalFinal := totalTagihan - penerima.Potongan + totalTambahan
-	sisa := totalFinal - totalBayar
-
-	status := "Lunas"
-	if sisa > 0 {
-		status = "Belum Lunas"
+	if len(results) == 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 
-	return KwitansiTagihan{
-		InvoiceID:     penerima.Invoice.IDInvoice,
-		Deskripsi:     penerima.Invoice.Deskripsi,
-		TglInvoice:    penerima.Invoice.TglInvoice,
-		TglJatuhTempo: penerima.Invoice.TglJatuhTempo,
-		TotalTagihan:  totalFinal,
-		TotalBayar:    totalBayar,
-		SisaTagihan:   sisa,
-		Status:        status,
-	}, nil
+	return results, nil
 }
+

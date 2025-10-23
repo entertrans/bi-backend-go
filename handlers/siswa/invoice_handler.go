@@ -37,17 +37,12 @@ func InvoiceDetailByNISHandler(c *gin.Context) {
 func LatestUnpaidInvoiceHandler(c *gin.Context) {
 	nis := c.Param("nis")
 
-	result, err := siswaControllers.GetLatestUnpaidInvoiceByNIS(nis)
+	results, err := siswaControllers.GetLatestUnpaidInvoiceByNIS(nis)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada tagihan aktif"})
 		return
 	}
 
-	// Kalau sudah lunas semua, bisa juga return kosong
-	if result.SisaTagihan <= 0 {
-		c.JSON(http.StatusOK, gin.H{"message": "Semua tagihan sudah lunas"})
-		return
-	}
-
-	c.JSON(http.StatusOK, result)
+	c.JSON(http.StatusOK, results)
 }
+
