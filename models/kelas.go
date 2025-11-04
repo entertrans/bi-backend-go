@@ -26,19 +26,25 @@ func (KelasMapel) TableName() string {
 	return "tbl_kelas_mapel"
 }
 
-type OnlineClass struct {
-	IDOnlineClass uint      `gorm:"column:id_online_class;primaryKey;autoIncrement" json:"id_online_class"`
-	IDKelasMapel  uint      `gorm:"column:id_kelas_mapel;not null" json:"id_kelas_mapel"`
-	Tanggal       time.Time `gorm:"column:tanggal;type:date;not null" json:"tanggal"`
-	Mulai         string    `gorm:"column:mulai;type:time;not null" json:"mulai"`
-	Selesai       string    `gorm:"column:selesai;type:time;not null" json:"selesai"`
-	Status        string    `gorm:"column:status;type:enum('belum','sedang','selesai');default:'belum'" json:"status"`
-	MeetLink      string    `gorm:"column:meet_link;size:255;not null" json:"meet_link"`
 
-	// Relasi
+type KelasOnline struct {
+	IDKelasOnline uint      `gorm:"column:id_kelas_online;primaryKey;autoIncrement" json:"id_kelas_online"`
+	IDKelasMapel  uint      `gorm:"column:id_kelas_mapel;not null" json:"id_kelas_mapel"`
+	GuruID        uint      `gorm:"column:guru_id;not null" json:"guru_id"`
+	JudulKelas    string    `gorm:"column:judul_kelas;size:150;not null" json:"judul_kelas"`
+	TanggalKelas  time.Time `gorm:"column:tanggal_kelas;not null" json:"tanggal_kelas"`
+	JamMulai      string    `gorm:"column:jam_mulai;size:10;not null" json:"jam_mulai"`
+	JamSelesai    string    `gorm:"column:jam_selesai;size:10;not null" json:"jam_selesai"`
+	Status        string    `gorm:"column:status;type:enum('akan_berlangsung','sedang_berlangsung','selesai');default:'akan_berlangsung'" json:"status"`
+	LinkKelas     string    `gorm:"column:link_kelas;size:255" json:"link_kelas"`
+	MateriLink    string    `gorm:"column:materi_link;size:255" json:"materi_link"`
+	CreatedAt     time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
+	UpdatedAt     time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
+
 	KelasMapel KelasMapel `gorm:"foreignKey:IDKelasMapel;references:ID" json:"kelas_mapel"`
+	Guru       Guru       `gorm:"foreignKey:GuruID;references:GuruID" json:"guru"`
 }
 
-func (OnlineClass) TableName() string {
-	return "tbl_online_class"
+func (KelasOnline) TableName() string {
+	return "tbl_kelas_online"
 }

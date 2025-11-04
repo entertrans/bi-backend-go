@@ -104,4 +104,13 @@ func RegisterGuruRoutes(r *gin.Engine) {
 		nilaiGroup.GET("/tugas/:kelas_id/:mapel_id", guruhandlers.GetDetailTugas)
 		nilaiGroup.GET("/peserta/:type/:test_id/:kelas_id", guruhandlers.GetDetailPesertaTest)
 	}
+
+	kelasOnline := r.Group("/guru/kelas-online")
+    {
+        kelasOnline.GET("", guruhandlers.GetAllKelasOnlineHandler)
+        kelasOnline.GET("/:id", guruhandlers.GetKelasOnlineByIDHandler)
+        kelasOnline.POST("", guruhandlers.CreateKelasOnlineHandler)
+        kelasOnline.PUT("/:id", guruhandlers.UpdateKelasOnlineHandler)
+        kelasOnline.DELETE("/:id", guruhandlers.DeleteKelasOnlineHandler)
+    }
 }

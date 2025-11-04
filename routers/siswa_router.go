@@ -49,14 +49,20 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		invoice.GET("/:nis/invoice/unpaid-latest", siswaHandler.LatestUnpaidInvoiceHandler)
 	}
 
-	online := r.Group("siswa/online")
+	// online := r.Group("siswa/online")
+	// {
+	// 	online.GET("/", siswaHandler.GetAllOnlineClassHandler)
+	// 	online.GET("/:id", siswaHandler.GetOnlineClassByIDHandler)
+	// 	online.GET("/kelas/:kelas_id", siswaHandler.GetOnlineClassByKelasHandler)
+	// 	online.GET("/mapel/:mapel_id", siswaHandler.GetOnlineClassByMapelHandler)
+	// 	online.POST("/", siswaHandler.CreateOnlineClassHandler)
+	// 	online.PUT("/:id", siswaHandler.UpdateOnlineClassHandler)
+	// 	online.DELETE("/:id", siswaHandler.DeleteOnlineClassHandler)
+	// }
+	kelasOnline := r.Group("siswa/kelas-online")
 	{
-		online.GET("/", siswaHandler.GetAllOnlineClassHandler)
-		online.GET("/:id", siswaHandler.GetOnlineClassByIDHandler)
-		online.GET("/kelas/:kelas_id", siswaHandler.GetOnlineClassByKelasHandler)
-		online.GET("/mapel/:mapel_id", siswaHandler.GetOnlineClassByMapelHandler)
-		online.POST("/", siswaHandler.CreateOnlineClassHandler)
-		online.PUT("/:id", siswaHandler.UpdateOnlineClassHandler)
-		online.DELETE("/:id", siswaHandler.DeleteOnlineClassHandler)
+		kelasOnline.GET("/mapel/:kelas_id", siswaHandler.GetMapelByKelasHandler)
+		kelasOnline.GET("/:kelas_id", siswaHandler.GetKelasOnlineByKelasIDHandler)
+		kelasOnline.GET("/detail/:id_kelas_mapel", siswaHandler.GetKelasOnlineHistoryHandler)
 	}
 }

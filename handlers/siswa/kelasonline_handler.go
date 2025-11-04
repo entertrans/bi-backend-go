@@ -2,158 +2,44 @@ package siswa
 
 import (
 	"net/http"
-	"strconv"
 
 	siswaControllers "github.com/entertrans/bi-backend-go/controllers/siswa"
-	"github.com/entertrans/bi-backend-go/models"
-	"github.com/entertrans/bi-backend-go/utils"
 	"github.com/gin-gonic/gin"
 )
 
-var OnlineClassController = &siswaControllers.OnlineClassController{}
+// 📘 Endpoint 1: daftar kelas online berdasarkan kelas_id
+func GetKelasOnlineByKelasIDHandler(c *gin.Context) {
+	kelasID := c.Param("kelas_id")
 
-// GetAllOnlineClassHandler mendapatkan semua jadwal online class
-func GetAllOnlineClassHandler(c *gin.Context) {
-	onlineClasses, err := OnlineClassController.GetAllOnlineClass()
+	result, err := siswaControllers.GetKelasOnlineByKelasID(kelasID)
 	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "Gagal mengambil data online class")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	utils.RespondJSON(c, http.StatusOK, onlineClasses)
+	c.JSON(http.StatusOK, result)
 }
 
-// GetOnlineClassByIDHandler mendapatkan satu jadwal online class by ID
-func GetOnlineClassByIDHandler(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
+// 📘 Endpoint 2: daftar riwayat kelas berdasarkan id_kelas_mapel
+func GetKelasOnlineHistoryHandler(c *gin.Context) {
+	idKelasMapel := c.Param("id_kelas_mapel")
+
+	result, err := siswaControllers.GetKelasOnlineHistory(idKelasMapel)
 	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "ID tidak valid")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	onlineClass, err := OnlineClassController.GetOnlineClassByID(uint(id))
-	if err != nil {
-		utils.RespondError(c, http.StatusNotFound, "Online class tidak ditemukan")
-		return
-	}
-
-	utils.RespondJSON(c, http.StatusOK, onlineClass)
+	c.JSON(http.StatusOK, result)
 }
 
-// GetOnlineClassByKelasHandler mendapatkan jadwal online class by kelas_id
-func GetOnlineClassByKelasHandler(c *gin.Context) {
-	kelasID, err := strconv.Atoi(c.Param("kelas_id"))
-	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "Kelas ID tidak valid")
-		return
-	}
 
-	onlineClasses, err := OnlineClassController.GetOnlineClassByKelas(uint(kelasID))
-	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "Gagal mengambil data online class")
-		return
-	}
-
-	utils.RespondJSON(c, http.StatusOK, onlineClasses)
-}
-
-// GetOnlineClassByMapelHandler mendapatkan jadwal online class by mapel_id
-func GetOnlineClassByMapelHandler(c *gin.Context) {
-	mapelID, err := strconv.Atoi(c.Param("mapel_id"))
-	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "Mapel ID tidak valid")
-		return
-	}
-
-	onlineClasses, err := OnlineClassController.GetOnlineClassByMapel(uint(mapelID))
-	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "Gagal mengambil data online class")
-		return
-	}
-
-	utils.RespondJSON(c, http.StatusOK, onlineClasses)
-}
-
-// CreateOnlineClassHandler membuat jadwal online class baru
-func CreateOnlineClassHandler(c *gin.Context) {
-	var onlineClass models.OnlineClass
-	
-	if err := c.ShouldBindJSON(&onlineClass); err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "Data input tidak valid")
-		return
-	}
-
-	// Validasi data
-	if onlineClass.IDKelasMapel == 0 {
-		utils.RespondError(c, http.StatusBadRequest, "ID Kelas Mapel harus diisi")
-		return
-	}
-
-	if onlineClass.Tanggal.IsZero() {
-		utils.RespondError(c, http.StatusBadRequest, "Tanggal harus diisi")
-		return
-	}
-
-	if onlineClass.Mulai == "" {
-		utils.RespondError(c, http.StatusBadRequest, "Waktu mulai harus diisi")
-		return
-	}
-
-	if onlineClass.Selesai == "" {
-		utils.RespondError(c, http.StatusBadRequest, "Waktu selesai harus diisi")
-		return
-	}
-
-	if onlineClass.MeetLink == "" {
-		utils.RespondError(c, http.StatusBadRequest, "Link meeting harus diisi")
-		return
-	}
-
-	err := OnlineClassController.CreateOnlineClass(&onlineClass)
-	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "Gagal membuat online class")
-		return
-	}
-
-	utils.RespondJSON(c, http.StatusCreated, onlineClass)
-}
-
-// UpdateOnlineClassHandler mengupdate jadwal online class
-func UpdateOnlineClassHandler(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "ID tidak valid")
-		return
-	}
-
-	var onlineClass models.OnlineClass
-	if err := c.ShouldBindJSON(&onlineClass); err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "Data input tidak valid")
-		return
-	}
-
-	err = OnlineClassController.UpdateOnlineClass(uint(id), &onlineClass)
-	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "Gagal mengupdate online class")
-		return
-	}
-
-	utils.RespondJSON(c, http.StatusOK, gin.H{"message": "Online class berhasil diupdate"})
-}
-
-// DeleteOnlineClassHandler menghapus jadwal online class
-func DeleteOnlineClassHandler(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		utils.RespondError(c, http.StatusBadRequest, "ID tidak valid")
-		return
-	}
-
-	err = OnlineClassController.DeleteOnlineClass(uint(id))
-	if err != nil {
-		utils.RespondError(c, http.StatusInternalServerError, "Gagal menghapus online class")
-		return
-	}
-
-	utils.RespondJSON(c, http.StatusOK, gin.H{"message": "Online class berhasil dihapus"})
+func GetMapelByKelasHandler(c *gin.Context) {
+    kelasID := c.Param("kelas_id")
+    result, err := siswaControllers.GetMapelByKelasID(kelasID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, result)
 }
