@@ -43,3 +43,16 @@ func GetMapelByKelasHandler(c *gin.Context) {
     }
     c.JSON(http.StatusOK, result)
 }
+
+// 📘 Endpoint 3: detail materi berdasarkan id_kelas_online
+func GetMateriByKelasOnlineHandler(c *gin.Context) {
+    idKelasOnline := c.Param("id_kelas_online")
+
+    result, err := siswaControllers.GetMateriByKelasOnline(idKelasOnline)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, result)
+}

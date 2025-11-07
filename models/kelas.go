@@ -31,6 +31,7 @@ type KelasOnline struct {
 	IDKelasOnline uint      `gorm:"column:id_kelas_online;primaryKey;autoIncrement" json:"id_kelas_online"`
 	IDKelasMapel  uint      `gorm:"column:id_kelas_mapel;not null" json:"id_kelas_mapel"`
 	GuruID        uint      `gorm:"column:guru_id;not null" json:"guru_id"`
+	Materi []KelasMateri `gorm:"foreignKey:IDKelasOnline"`
 	JudulKelas    string    `gorm:"column:judul_kelas;size:150;not null" json:"judul_kelas"`
 	TanggalKelas  time.Time `gorm:"column:tanggal_kelas;not null" json:"tanggal_kelas"`
 	JamMulai      string    `gorm:"column:jam_mulai;size:10;not null" json:"jam_mulai"`
@@ -47,4 +48,20 @@ type KelasOnline struct {
 
 func (KelasOnline) TableName() string {
 	return "tbl_kelas_online"
+}
+
+
+
+type KelasMateri struct {
+	IDKelasMateri uint      `gorm:"column:id_kelas_materi;primaryKey;autoIncrement" json:"id_kelas_materi"`
+	IDKelasOnline uint      `gorm:"column:id_kelas_online;not null" json:"id_kelas_online"`
+	Judul         string    `gorm:"column:judul;size:255;not null" json:"judul"`
+	Tipe          string    `gorm:"column:tipe;type:enum('link','file','catatan');default:'file'" json:"tipe"`
+	UrlFile       string    `gorm:"column:url_file;size:255" json:"url_file"`
+	Keterangan    string    `gorm:"column:keterangan;type:text" json:"keterangan"`
+	UploadedAt    time.Time `gorm:"column:uploaded_at;autoCreateTime" json:"uploaded_at"`
+}
+
+func (KelasMateri) TableName() string {
+	return "tbl_kelas_materi"
 }

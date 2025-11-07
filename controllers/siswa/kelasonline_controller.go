@@ -211,3 +211,60 @@ func mapStatusSingkat(statusFull string) string {
 		return "belum"
 	}
 }
+// Struktur respons utama yang akan dikirim ke frontend
+type MateriDetailResponse struct {
+	Topik     string       `json:"topik"`
+	Tanggal   string       `json:"tanggal"`
+	Guru      string       `json:"guru"`
+	Materi    []MateriItem `json:"materi"`
+}
+
+// Struktur untuk tiap item materi
+type MateriItem struct {
+	ID         int    `json:"id"`
+	Judul      string `json:"judul"`
+	Tipe       string `json:"tipe"`
+	Link       string `json:"link"`
+	Keterangan string `json:"keterangan"`
+}
+
+// ✅ Endpoint: ambil detail materi berdasarkan id_kelas_online
+func GetMateriByKelasOnline(idKelasOnline string) (MateriDetailResponse, error) {
+	// 1️⃣ Validasi parameter ID agar pasti angka
+	id, err := strconv.ParseUint(idKelasOnline, 10, 32)
+	if err != nil {
+		return MateriDetailResponse{}, errors.New("invalid id_kelas_online")
+	}
+
+	// 2️⃣ Ambil data kelas online + relasi guru, mapel, dan materi
+	var kelasOnline models.KelasOnline
+	err = config.DB.
+		Preload("Guru").
+		Preload("KelasMapel.Mapel").
+		Preload("Materi").
+		First(&kelasOnline, "id_kelas_online = ?", uint(id)).Error
+	if err != nil {
+		return MateriDetailResponse{}, err
+	}
+
+	// 3️⃣ Buat list materi untuk response
+	var materiList []MateriItem
+	for i, materi := range kelasOnline.Materi {
+		materiList = append(materiList, MateriItem{
+			ID:         i + 1,
+			Judul:      materi.Judul,
+			Tipe:       materi.Tipe,
+			Link:       materi.UrlFile,
+			Keterangan: materi.Keterangan,
+		})
+	}
+	// 5️⃣ Bentuk respons akhir
+	response := MateriDetailResponse{
+		Topik:     kelasOnline.JudulKelas,
+		Tanggal:   kelasOnline.TanggalKelas.String(), // format biar frontend yang atur
+		Guru:      kelasOnline.Guru.GuruNama,
+		Materi:    materiList,
+	}
+
+	return response, nil
+}

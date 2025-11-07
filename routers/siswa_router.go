@@ -64,5 +64,6 @@ func RegisterSiswaRoutes(r *gin.Engine) {
 		kelasOnline.GET("/mapel/:kelas_id", siswaHandler.GetMapelByKelasHandler)
 		kelasOnline.GET("/:kelas_id", siswaHandler.GetKelasOnlineByKelasIDHandler)
 		kelasOnline.GET("/detail/:id_kelas_mapel", siswaHandler.GetKelasOnlineHistoryHandler)
+		kelasOnline.GET("/materi/:id_kelas_online", siswaHandler.GetMateriByKelasOnlineHandler)
 	}
 }
