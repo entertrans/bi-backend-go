@@ -25,6 +25,51 @@ func GetAllMapelWithGuruMapels() ([]models.Mapel, error) {
     return mapels, err
 }
 
+
+type KelasMapelWithGuru struct {
+    PelajaranID uint   `json:"pelajaran_id"`
+    KelasID     uint   `json:"kelas_id"`
+    KelasNama   string `json:"kelas_nama"`
+    NmMapel     string `json:"nm_mapel"`
+    GuruMapels  string `json:"guru_mapels"`
+}
+
+func GetKelasMapelWithGuru() ([]KelasMapelWithGuru, error) {
+    var kelasMapels []models.KelasMapel
+
+    // Preload seluruh relasi yang dibutuhkan
+    err := config.DB.
+        Preload("Kelas").
+        Preload("Mapel.GuruMapels.Guru").
+		Order("kelas_id ASC").
+        Find(&kelasMapels).Error
+    if err != nil {
+        return nil, err
+    }
+
+    var result []KelasMapelWithGuru
+    for _, km := range kelasMapels {
+        // Ambil nama guru pertama yang aktif (kalau ada)
+        var guruNama string
+        for _, gm := range km.Mapel.GuruMapels {
+            if gm.KelasID == km.KelasID && gm.StatusAktif {
+                guruNama = gm.Guru.GuruNama
+                break
+            }
+        }
+
+        result = append(result, KelasMapelWithGuru{
+            PelajaranID: km.ID,
+            KelasID:     km.KelasID,
+            KelasNama:   km.Kelas.KelasNama,
+            NmMapel:     km.Mapel.NmMapel,
+            GuruMapels:  guruNama,
+        })
+    }
+
+    return result, nil
+}
+
 func GetMapelByKelas(c *gin.Context) {
 	kelasID := c.Param("id") // ambil dari /mapel-by-kelas/:id
 	if kelasID == "" {

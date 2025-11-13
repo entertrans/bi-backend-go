@@ -25,8 +25,6 @@ type KelasMapel struct {
 func (KelasMapel) TableName() string {
 	return "tbl_kelas_mapel"
 }
-
-
 type KelasOnline struct {
 	IDKelasOnline uint      `gorm:"column:id_kelas_online;primaryKey;autoIncrement" json:"id_kelas_online"`
 	IDKelasMapel  uint      `gorm:"column:id_kelas_mapel;not null" json:"id_kelas_mapel"`

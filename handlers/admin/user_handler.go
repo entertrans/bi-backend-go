@@ -17,6 +17,15 @@ func GetMapelHandler(c *gin.Context) {
     c.JSON(http.StatusOK, mapels)
 }
 
+func GetKelasMapelWithGuruHandler(c *gin.Context) {
+    result, err := admincontrollers.GetKelasMapelWithGuru()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, result)
+}
+
 func GetSiswaByKelasHandler(c *gin.Context) {
 	kelasIDStr := c.Param("kelas_id")
 	kelasID, err := strconv.Atoi(kelasIDStr)
