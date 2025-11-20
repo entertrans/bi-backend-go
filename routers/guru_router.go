@@ -107,6 +107,7 @@ func RegisterGuruRoutes(r *gin.Engine) {
 
 	kelasOnline := r.Group("/guru/kelas-online")
     {
+		kelasOnline.GET("/mapel/:id_kelas_mapel", guruhandlers.GetKelasOnlineByMapelHandler)
         kelasOnline.GET("", guruhandlers.GetAllKelasOnlineHandler)
         kelasOnline.GET("/:id", guruhandlers.GetKelasOnlineByIDHandler)
         kelasOnline.POST("", guruhandlers.CreateKelasOnlineHandler)

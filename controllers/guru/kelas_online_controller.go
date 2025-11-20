@@ -20,6 +20,34 @@ type KelasOnlineResponse struct {
 	MapelNama     string    `json:"mapel_nama"`
 	KelasNama     string    `json:"kelas_nama"`
 }
+type KelasOnlineListResponse struct {
+    IDKelasOnline uint   `json:"id_kelas_online"`
+    JudulKelas    string `json:"judul_kelas"`
+    NamaGuru      string `json:"nama_guru"`
+    NamaMapel     string `json:"nama_mapel"`
+    TanggalKelas  string `json:"tanggal_kelas"`
+    JamMulai      string `json:"jam_mulai"`
+    JamSelesai    string `json:"jam_selesai"`
+    Status        string `json:"status"`
+    LinkKelas     string `json:"link_kelas"`
+}
+type KelasOnlineDetailResponse struct {
+    ID      uint            `json:"id"`
+    Topik   string          `json:"topik"`
+    Tanggal string          `json:"tanggal"`
+    Guru    string          `json:"guru"`
+    Materi  []MateriResponse `json:"materi"`
+}
+
+type MateriResponse struct {
+    ID         uint      `json:"id"`
+    Judul      string    `json:"judul"`
+    Tipe       string    `json:"tipe"`
+    Link       string    `json:"link"`       // dari UrlFile
+    Keterangan string    `json:"keterangan"`
+    UploadedAt string    `json:"uploaded_at"` // format string agar mudah dibaca di client
+}
+
 
 //
 // 📄 Controller Functions
@@ -54,32 +82,73 @@ func GetAllKelasOnline() ([]KelasOnlineResponse, error) {
 	}
 	return results, nil
 }
+func GetKelasOnlineByMapel(idMapel string) ([]KelasOnlineListResponse, error) {
+    var data []models.KelasOnline
 
-func GetKelasOnlineByID(id string) (KelasOnlineResponse, error) {
-	var k models.KelasOnline
-	err := config.DB.
-		Preload("Guru").
-		Preload("KelasMapel.Kelas").
-		Preload("KelasMapel.Mapel").
-		First(&k, id).Error
-	if err != nil {
-		return KelasOnlineResponse{}, err
-	}
+    err := config.DB.
+        Preload("Guru").
+        Preload("KelasMapel.Mapel").
+        Where("id_kelas_mapel = ?", idMapel).
+        Find(&data).Error
 
-	return KelasOnlineResponse{
-		IDKelasOnline: k.IDKelasOnline,
-		JudulKelas:    k.JudulKelas,
-		TanggalKelas:  k.TanggalKelas,
-		JamMulai:      k.JamMulai,
-		JamSelesai:    k.JamSelesai,
-		Status:        k.Status,
-		LinkKelas:     k.LinkKelas,
-		MateriLink:    k.MateriLink,
-		GuruNama:      k.Guru.GuruNama,
-		MapelNama:     k.KelasMapel.Mapel.NmMapel,
-		KelasNama:     k.KelasMapel.Kelas.KelasNama,
-	}, nil
+    if err != nil {
+        return nil, err
+    }
+
+    var res []KelasOnlineListResponse
+
+    for _, k := range data {
+        res = append(res, KelasOnlineListResponse{
+            IDKelasOnline: k.IDKelasOnline,
+            JudulKelas:    k.JudulKelas,
+            NamaGuru:      k.Guru.GuruNama,
+            NamaMapel:     k.KelasMapel.Mapel.NmMapel,
+            TanggalKelas:  k.TanggalKelas.Format("2006-01-02"),
+            JamMulai:      k.JamMulai,
+            JamSelesai:    k.JamSelesai,
+            Status:        k.Status,
+            LinkKelas:     k.LinkKelas,
+        })
+    }
+
+    return res, nil
 }
+
+
+func GetKelasOnlineByID(id string) (KelasOnlineDetailResponse, error) {
+    var k models.KelasOnline
+
+    err := config.DB.
+        Preload("Guru").
+        Preload("Materi").         // penting: preload materi
+        First(&k, id).Error
+    if err != nil {
+        return KelasOnlineDetailResponse{}, err
+    }
+
+    // map materi
+    materiList := make([]MateriResponse, 0, len(k.Materi))
+    for _, m := range k.Materi {
+        materiList = append(materiList, MateriResponse{
+            ID:         m.IDKelasMateri,
+            Judul:      m.Judul,
+            Tipe:       m.Tipe,
+            Link:       m.UrlFile,
+            Keterangan: m.Keterangan,
+            UploadedAt: m.UploadedAt.Format(time.RFC3339), // atau format lain "2006-01-02 15:04:05"
+        })
+    }
+
+    return KelasOnlineDetailResponse{
+        ID:      k.IDKelasOnline,
+        Topik:   k.JudulKelas,
+        Tanggal: k.TanggalKelas.Format(time.RFC3339), // atau "2006-01-02 15:04:05" sesuai kebutuhan
+        Guru:    k.Guru.GuruNama,
+        Materi:  materiList,
+    }, nil
+}
+
+
 
 func CreateKelasOnline(data models.KelasOnline) (models.KelasOnline, error) {
 	if err := config.DB.Create(&data).Error; err != nil {

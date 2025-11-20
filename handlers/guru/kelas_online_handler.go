@@ -16,6 +16,18 @@ func GetAllKelasOnlineHandler(c *gin.Context) {
     }
     c.JSON(http.StatusOK, result)
 }
+func GetKelasOnlineByMapelHandler(c *gin.Context) {
+    id := c.Param("id_kelas_mapel")
+
+    result, err := gurucontrollers.GetKelasOnlineByMapel(id)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, result)
+}
+
 
 func GetKelasOnlineByIDHandler(c *gin.Context) {
     id := c.Param("id")
