@@ -36,7 +36,6 @@ type KelasOnline struct {
 	JamSelesai    string    `gorm:"column:jam_selesai;size:10;not null" json:"jam_selesai"`
 	Status        string    `gorm:"column:status;type:enum('akan_berlangsung','sedang_berlangsung','selesai');default:'akan_berlangsung'" json:"status"`
 	LinkKelas     string    `gorm:"column:link_kelas;size:255" json:"link_kelas"`
-	MateriLink    string    `gorm:"column:materi_link;size:255" json:"materi_link"`
 	CreatedAt     time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
 	UpdatedAt     time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 

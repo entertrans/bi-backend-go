@@ -1,6 +1,7 @@
 package gurucontrollers
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/entertrans/bi-backend-go/config"
@@ -74,7 +75,6 @@ func GetAllKelasOnline() ([]KelasOnlineResponse, error) {
 			JamSelesai:    k.JamSelesai,
 			Status:        k.Status,
 			LinkKelas:     k.LinkKelas,
-			MateriLink:    k.MateriLink,
 			GuruNama:      k.Guru.GuruNama,            // asumsikan field Guru.Nama ada
 			MapelNama:     k.KelasMapel.Mapel.NmMapel, // asumsikan field Mapel.Nama ada
 			KelasNama:     k.KelasMapel.Kelas.KelasNama, // asumsikan field Kelas.Nama ada
@@ -151,11 +151,14 @@ func GetKelasOnlineByID(id string) (KelasOnlineDetailResponse, error) {
 
 
 func CreateKelasOnline(data models.KelasOnline) (models.KelasOnline, error) {
-	if err := config.DB.Create(&data).Error; err != nil {
-		return models.KelasOnline{}, err
-	}
-	return data, nil
+    if err := config.DB.Create(&data).Error; err != nil {
+        // print error detail di log server
+        fmt.Printf("DB Create error: %T - %v\n", err, err)
+        return models.KelasOnline{}, err
+    }
+    return data, nil
 }
+
 
 func UpdateKelasOnline(id string, data models.KelasOnline) (models.KelasOnline, error) {
 	var existing models.KelasOnline

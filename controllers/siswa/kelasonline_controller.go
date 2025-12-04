@@ -48,7 +48,6 @@ func GetKelasOnlineByKelasID(kelasID string) ([]KelasOnlineList, error) {
 			JamSelesai:    k.JamSelesai,
 			Status:        k.Status,
 			LinkKelas:     k.LinkKelas,
-			MateriLink:    k.MateriLink,
 		})
 	}
 	return result, nil
@@ -79,7 +78,6 @@ func GetKelasOnlineHistory(idKelasMapel string) ([]KelasOnlineList, error) {
 			JamSelesai:    k.JamSelesai,
 			Status:        k.Status,
 			LinkKelas:     k.LinkKelas,
-			MateriLink:    k.MateriLink,
 		})
 	}
 	return result, nil
